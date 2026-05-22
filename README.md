@@ -89,7 +89,7 @@ Abra diretamente no navegador — funciona sem servidor.
 O jogo é hospedado via GitHub Pages. Para publicar uma nova versão:
 
 ```bash
-git add index.html README.md
+git add index.html css/style.css js/app.js README.md
 git commit -m "Descrição das mudanças"
 git push
 ```
@@ -100,8 +100,12 @@ git push
 
 ```
 Jogo da Memória/
-├── index.html   # Todo o jogo: HTML + CSS + JS em um único arquivo
-└── README.md
+├── index.html       # Estrutura HTML das telas
+├── README.md
+├── css/
+│   └── style.css    # Todos os estilos, temas e animações CSS
+└── js/
+    └── app.js       # Toda a lógica do jogo (áudio, Firebase, IA, recordes)
 ```
 
 ---

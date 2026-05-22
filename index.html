@@ -55,6 +55,7 @@
     <button class="btn btn-primary"   onclick="showScreen('screen-setup')">Jogar</button>
     <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-online')">🌐 Jogar Online</button>
     <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-records')">🏅 Recordes</button>
+    <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-ranking')">🌍 Ranking Global</button>
     <p class="menu-credit">Desenvolvido por <span>Mariana Ervati</span></p>
   </div>
 </div>
@@ -208,6 +209,20 @@
 <div class="glass-card">
   <h2 class="setup-title">🏅 Recordes</h2>
   <div id="records-list"></div>
+  <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
+</div>
+</div>
+
+<!-- ═══ RANKING GLOBAL ═══ -->
+<div id="screen-ranking" class="screen">
+<div class="glass-card">
+  <h2 class="setup-title">🌍 Ranking Global</h2>
+  <div class="rank-tabs">
+    <button class="rank-tab sel" onclick="carregarRanking('4x4', this)">4 × 4</button>
+    <button class="rank-tab"     onclick="carregarRanking('4x5', this)">4 × 5</button>
+    <button class="rank-tab"     onclick="carregarRanking('6x6', this)">6 × 6</button>
+  </div>
+  <div id="ranking-lista"></div>
   <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
 </div>
 </div>

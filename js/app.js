@@ -57,6 +57,7 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   playMusic();
   if (id === 'screen-records') mostrarRecordes();
+  if (id === 'screen-ranking') carregarRanking('4x4');
 }
 
 function pick(el) {
@@ -435,14 +436,16 @@ function endGame() {
     list.appendChild(el);
   });
 
-  // Recorde
+  // Recorde local + ranking global
   const humanP = G.players.find(p => !p.isAI);
   const aiP    = G.players.find(p =>  p.isAI);
   let posRecorde = 0;
   if (isAI && humanP && aiP && humanP.score > aiP.score) {
     posRecorde = salvarRecorde(humanP.name, cfg.size, diffLabel[cfg.diff], jogoTempo, jogoTentativas);
+    salvarRankingGlobal(humanP.name, cfg.size, diffLabel[cfg.diff], jogoTentativas, jogoTempo);
   } else if (!isAI && winners.length === 1) {
     posRecorde = salvarRecorde(winners[0].name, cfg.size, 'Multi', jogoTempo, jogoTentativas);
+    salvarRankingGlobal(winners[0].name, cfg.size, 'Multi', jogoTentativas, jogoTempo);
   }
   document.getElementById('end-record').textContent =
     posRecorde ? `🏅 Novo recorde! ${['','🥇','🥈','🥉','4️⃣','5️⃣'][posRecorde]} Top ${posRecorde}` : '';
@@ -1179,6 +1182,71 @@ function limparRecordes() {
     localStorage.removeItem('recordes');
     mostrarRecordes();
   }
+}
+
+// ─────────────────────────────────────────────
+// RANKING GLOBAL (Firebase)
+// ─────────────────────────────────────────────
+function salvarRankingGlobal(nome, tamanho, modo, tentativas, tempo) {
+  console.log('[Ranking] Salvando:', { nome, tamanho, modo, tentativas, tempo });
+  const ref = db.ref('ranking/' + tamanho);
+  ref.push({ nome: nome.substring(0, 20), tentativas, tempo, modo, ts: Date.now() })
+    .then(() => {
+      console.log('[Ranking] Salvo com sucesso!');
+      return ref.once('value');
+    })
+    .then(snap => {
+      const entries = [];
+      snap.forEach(c => entries.push({ key: c.key, ...c.val() }));
+      entries.sort((a, b) => a.tentativas - b.tentativas || a.tempo - b.tempo);
+      entries.slice(10).forEach(e => ref.child(e.key).remove());
+    })
+    .catch(err => console.error('[Ranking] Erro:', err));
+}
+
+function carregarRanking(tamanho, tabEl) {
+  // Atualiza aba selecionada
+  document.querySelectorAll('.rank-tab').forEach((t, i) => {
+    t.classList.toggle('sel', tabEl ? t === tabEl : i === 0);
+  });
+
+  const el = document.getElementById('ranking-lista');
+  if (!el) return;
+  el.innerHTML = '<p class="rank-loading">Carregando...</p>';
+
+  db.ref('ranking/' + tamanho).once('value')
+    .then(snap => {
+      const entries = [];
+      snap.forEach(c => entries.push(c.val()));
+      entries.sort((a, b) => a.tentativas - b.tentativas || a.tempo - b.tempo);
+      const top = entries.slice(0, 10);
+
+      if (top.length === 0) {
+        el.innerHTML = '<p class="rank-empty">Nenhum recorde ainda.<br>Seja o primeiro a entrar no ranking! 🏆</p>';
+        return;
+      }
+
+      const medalhas = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+      el.innerHTML = `
+        <table class="records-table">
+          <tr>
+            <th>#</th><th>Jogador</th><th>Modo</th>
+            <th style="text-align:center">Tentativas</th>
+            <th style="text-align:center">Tempo</th>
+          </tr>
+          ${top.map((r, i) => `
+            <tr>
+              <td>${medalhas[i]}</td>
+              <td><strong>${sanitize(r.nome)}</strong></td>
+              <td class="dim">${r.modo}</td>
+              <td class="num">${r.tentativas}</td>
+              <td style="text-align:center">${formatarTempo(r.tempo)}</td>
+            </tr>`).join('')}
+        </table>`;
+    })
+    .catch(() => {
+      el.innerHTML = '<p class="rank-empty">Sem permissão no banco de dados.<br>Atualize as regras do Firebase. 🔒</p>';
+    });
 }
 
 // ─────────────────────────────────────────────

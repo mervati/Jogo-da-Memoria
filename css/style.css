@@ -423,6 +423,20 @@ body {
   max-width: 340px; margin-bottom: 20px; line-height: 1.5;
 }
 
+/* ── RANKING GLOBAL ── */
+.rank-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+.rank-tab {
+  padding: 8px 22px; border-radius: 20px;
+  border: 2px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04); color: var(--txt-muted);
+  cursor: pointer; font-size: .88rem; font-weight: 600;
+  transition: all .2s; outline: none;
+}
+.rank-tab:hover { border-color: rgba(255,255,255,.3); color: #fff; }
+.rank-tab.sel { border-color: var(--accent); background: rgba(var(--accent-rgb),.18); color: #fff; }
+.rank-loading { color: var(--txt-dim); text-align: center; padding: 32px 0; }
+.rank-empty { color: var(--txt-dim); text-align: center; padding: 32px 0; line-height: 1.8; }
+
 /* ── REACTIONS ── */
 .reaction-bar {
   display: none;

@@ -100,6 +100,10 @@ body {
   font-size: .95rem; color: #888; min-height: 22px; text-align: center;
 }
 .turn-bar span { color: #fff; font-weight: 700; }
+.timer-bar {
+  font-size: .9rem; font-weight: 700; min-height: 20px;
+  text-align: center; color: #888; letter-spacing: .5px;
+}
 
 .board { display: grid; gap: 9px; }
 
@@ -259,6 +263,7 @@ body {
 <div id="screen-game" class="screen">
   <div class="scores-panel" id="scores-panel"></div>
   <div class="turn-bar"     id="turn-bar"></div>
+  <div class="timer-bar"    id="timer-bar"></div>
   <div class="board"        id="board"></div>
   <button class="btn btn-secondary game-menu-btn" onclick="askMenu()">Menu</button>
 </div>
@@ -631,6 +636,35 @@ function askMenu() {
 // ─────────────────────────────────────────────
 let salaRef = null;
 let meuIndex = 0;
+let timerInterval = null;
+let timerSegundos = 120;
+
+function iniciarTimer() {
+  clearInterval(timerInterval);
+  timerSegundos = 120;
+  atualizarTimerDisplay();
+  if (!G.online || G.cur !== G.meuIndex) return;
+  timerInterval = setInterval(() => {
+    timerSegundos--;
+    atualizarTimerDisplay();
+    if (timerSegundos <= 0) {
+      clearInterval(timerInterval);
+      if (G.online && G.cur === G.meuIndex && !G.busy) {
+        salaRef.child('estado').update({ cur: (G.cur + 1) % 2, flipped: [] });
+      }
+    }
+  }, 1000);
+}
+
+function atualizarTimerDisplay() {
+  const el = document.getElementById('timer-bar');
+  if (!el) return;
+  if (!G.online) { el.textContent = ''; return; }
+  const min = Math.floor(timerSegundos / 60);
+  const seg = timerSegundos % 60;
+  el.textContent = `⏱ ${min}:${seg.toString().padStart(2, '0')}`;
+  el.style.color = timerSegundos <= 10 ? '#e94560' : '#888';
+}
 
 function criarSala() {
   const nome   = document.getElementById('online-name').value.trim() || 'Jogador 1';
@@ -727,6 +761,7 @@ function iniciarOnline(codigo) {
       renderBoard();
       refreshScores();
       setTurnBar();
+      iniciarTimer();
 
       if (G.flipped.length === 2 && G.cur === meuIndex) setTimeout(checkMatchOnline, 950);
       if (G.donePairs === G.totalPairs) setTimeout(endGame, 600);

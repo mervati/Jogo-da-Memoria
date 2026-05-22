@@ -244,7 +244,15 @@ function setTurnBar(thinking = false) {
   const p  = G.players[G.cur];
   const ic = p.isAI ? '🤖' : '👤';
   const tx = thinking ? ` <em style="color:#666;font-style:normal">(pensando…)</em>` : '';
-  document.getElementById('turn-bar').innerHTML = `${ic} Vez de <span>${sanitize(p.name)}</span>${tx}`;
+  let turnLabel;
+  if (p.isAI) {
+    turnLabel = `${ic} Vez da máquina`;
+  } else if (p.name === 'Você') {
+    turnLabel = `${ic} Sua vez de jogar`;
+  } else {
+    turnLabel = `${ic} Vez de <span>${sanitize(p.name)}</span>`;
+  }
+  document.getElementById('turn-bar').innerHTML = turnLabel + tx;
 }
 
 // ─────────────────────────────────────────────

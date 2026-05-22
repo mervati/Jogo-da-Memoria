@@ -685,6 +685,29 @@ function iniciarOnline(codigo) {
     showScreen('screen-game');
     renderScores();
 
+    const minhaRef = salaRef.child('jogadores/' + meuIndex + '/online');
+    minhaRef.set(true);
+    minhaRef.onDisconnect().set(false);
+
+    const outroIndex = meuIndex === 0 ? 1 : 0;
+    salaRef.child('jogadores/' + outroIndex + '/online').on('value', snap => {
+      if (snap.val() === false && G.players[outroIndex]) {
+        G.busy = true;
+        let segundos = 10;
+        const turnBar = document.getElementById('turn-bar');
+        turnBar.innerHTML = `<span style="color:#e94560">⚠️ ${G.players[outroIndex].name} saiu da sala. Voltando ao menu em ${segundos}s...</span>`;
+        const timer = setInterval(() => {
+          segundos--;
+          if (segundos <= 0) {
+            clearInterval(timer);
+            showScreen('screen-menu');
+          } else {
+            turnBar.innerHTML = `<span style="color:#e94560">⚠️ ${G.players[outroIndex].name} saiu da sala. Voltando ao menu em ${segundos}s...</span>`;
+          }
+        }, 1000);
+      }
+    });
+
     salaRef.child('estado').on('value', snap => {
       const e = snap.val();
       if (!e || !e.cards) return;

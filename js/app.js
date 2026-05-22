@@ -729,29 +729,13 @@ function mostrarFimOnline(s0, s1, t0, t1) {
     const meuNome = G.players[meuIndex].name;
     salvarRankingGlobal(meuNome, cfg.osize, 'Online', jogoTentativas, tempoOnline);
   }
-  const revArea  = document.getElementById('revanche-area');
+  const revArea    = document.getElementById('revanche-area');
+  const outroIndex = meuIndex === 0 ? 1 : 0;
 
   if (!isWinner) {
     revArea.innerHTML = `<button class="btn btn-primary" onclick="pedirRevanche()">🔄 Pedir Revanche</button>`;
   } else {
     revArea.innerHTML = `<p style="color:#666;font-size:.9rem">Aguardando o adversário...</p>`;
-    const outroIndex = meuIndex === 0 ? 1 : 0;
-    const nomeOutro  = sanitize(G.players[outroIndex].name);
-    salaRef.child('jogadores/' + outroIndex + '/online').on('value', snap => {
-      if (snap.val() !== false) return;
-      salaRef.child('jogadores/' + outroIndex + '/online').off();
-      salaRef.child('revanche').off();
-      let seg = 5;
-      const atualizar = () => {
-        revArea.innerHTML = `<p style="color:#e94560;font-weight:600">😔 ${nomeOutro} desistiu.<br>Voltando ao menu em ${seg}s...</p>`;
-      };
-      atualizar();
-      const t = setInterval(() => {
-        seg--;
-        if (seg <= 0) { clearInterval(t); voltarMenuOnline(); }
-        else atualizar();
-      }, 1000);
-    });
   }
 
   showScreen('screen-end-online');
@@ -766,6 +750,24 @@ function mostrarFimOnline(s0, s1, t0, t1) {
   salaRef.child('revanche').on('value', snap => {
     const rev = snap.val();
     if (!rev) return;
+
+    if (rev.desistiu === true) {
+      salaRef.child('revanche').off();
+      if (isWinner) {
+        const nomeAdversario = sanitize(G.players[outroIndex].name);
+        let seg = 5;
+        const atualizar = () => {
+          revArea.innerHTML = `<p style="color:#e94560;font-weight:600">😔 ${nomeAdversario} desistiu.<br>Voltando ao menu em ${seg}s...</p>`;
+        };
+        atualizar();
+        const t = setInterval(() => {
+          seg--;
+          if (seg <= 0) { clearInterval(t); voltarMenuOnline(); }
+          else atualizar();
+        }, 1000);
+      }
+      return;
+    }
 
     if (rev.aceito === true)  { salaRef.child('revanche').off(); iniciarRevanche(); return; }
     if (rev.aceito === false) {
@@ -798,6 +800,11 @@ function mostrarFimOnline(s0, s1, t0, t1) {
       revArea.innerHTML = `<p style="color:#888;font-size:.9rem">Aguardando resposta...</p>`;
     }
   });
+}
+
+function sairFimJogo() {
+  if (salaRef) salaRef.child('revanche').set({ desistiu: true });
+  setTimeout(() => voltarMenuOnline(), 200);
 }
 
 function pedirRevanche() {

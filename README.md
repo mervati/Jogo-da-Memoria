@@ -13,6 +13,11 @@ Jogo da memória multijogador com modos offline, contra IA e online em tempo rea
 - **Contra a IA** — 3 níveis de dificuldade: Fácil, Médio e Difícil
 - **Online** — partidas em tempo real entre dois jogadores via código de sala
 
+### Navegação por abas
+Cada módulo possui abas internas para acesso rápido a todas as seções:
+- **Módulo offline** — abas: Jogar · Recordes · Stats
+- **Módulo online** — abas: Jogar Online · Ranking Global · Stats
+
 ### Tela inicial
 - Efeito **parallax em 3 camadas** reagindo ao mouse (desktop) e ao giroscópio (celular):
   - Orbs desfocados com as cores do tema pulsando ao fundo
@@ -31,10 +36,25 @@ Jogo da memória multijogador com modos offline, contra IA e online em tempo rea
 - **Modo daltônico** integrado ao widget de temas — substitui as cores dos jogadores por paleta acessível (azul, laranja, ciano, magenta), funciona em tempo real
 
 ### Animações de jogo
+- **Efeito ripple** ao clicar em uma carta — onda circular se expande a partir do toque, nos modos offline e online
 - **Brilho nas cartas** ao acertar par: pop de escala + faixa de luz varrendo a face + glow persistente na cor do tema
 - **Efeito no placar** ao marcar ponto: número cresce, card do jogador pulsa com glow, "+1" flutua e some
 - **Confete colorido** ao vencer e **chuva de cinzas** ao perder — ambos com fanfares de áudio
 - Mensagens de fim de jogo com humor contextual e exibição do nível de dificuldade
+- **Barra de turno** com textos naturais: "Sua vez de jogar" (jogador humano), "Vez da máquina" (IA), "Vez de [nome]" (multiplayer com nomes personalizados)
+
+### Nome do jogador salvo
+- Nome digitado é **salvo automaticamente** em `localStorage` ao sair do campo
+- Pre-preenche os campos de nome nas telas offline e online a cada acesso
+- Badge **💾 Nome salvo** exibido quando o nome é carregado automaticamente
+- Nome sincronizado entre os dois módulos — digitar em um atualiza o outro
+- Pode ser editado a qualquer momento; a alteração persiste para próximas sessões
+
+### Estatísticas detalhadas
+Histórico completo de desempenho por módulo, acessível na aba Stats de cada tela:
+- **Offline** — total de partidas, vitórias, taxa de vitória, média de tentativas e tempo médio, separados por tamanho de tabuleiro (4×4, 4×5, 6×6)
+- **Online** — mesmas métricas para partidas remotas, independentes das offline
+- Dados persistidos em `localStorage` e exibidos em cards por tamanho com indicadores de destaque
 
 ### Áudio
 - Música de fundo gerada via Web Audio API (presente desde a tela inicial)
@@ -46,15 +66,18 @@ Jogo da memória multijogador com modos offline, contra IA e online em tempo rea
 ### Placar e recordes
 - Cronômetro visível durante partidas offline — mesmo valor salvo no récorde
 - **Top 5 recordes pessoais** em `localStorage`, ordenados por tentativas e tempo como critério de desempate
-- Tela dedicada de recordes acessível pelo menu
+- Acessíveis diretamente pela aba Recordes dentro do módulo offline
 
 ### Modo online
 - Criação e entrada em sala por **código de 6 caracteres**
+- **Botão copiar** o código da sala — um clique copia para a área de transferência e confirma com "✅ Copiado!" por 2 segundos
+- Status e código da sala **limpos automaticamente** ao navegar de volta para a tela online, evitando exibição de estado desatualizado
 - Sincronização de tabuleiro, placar e turnos via Firebase em tempo real
 - **Chat de reações** com 6 emojis: 🖕 😭 🔥 💩 🤣 🤬 — sincronizado via Firebase com animação flutuante e cooldown de 2,5s
 - Temporizador de turno com alerta visual ao se esgotar
 - Sistema de revanche integrado
-- Detecção de desconexão com contagem regressiva
+- **Detecção de desistência** — ao sair do fim de jogo, o oponente vê a mensagem "[nome] não quer mais jogar. Voltando ao menu em 5s..." com contagem regressiva simétrica para ambos os jogadores
+- **Ranking Global** — placar online via Firebase com os 10 melhores por tamanho de tabuleiro, separado dos recordes offline; ordenado por tentativas e tempo
 
 ---
 
@@ -67,7 +90,7 @@ Jogo da memória multijogador com modos offline, contra IA e online em tempo rea
 | Áudio | Web Audio API (osciladores, ganho, agendamento) |
 | Animações | CSS Keyframes + Canvas API + requestAnimationFrame |
 | Parallax | mousemove / deviceorientation + lerp com requestAnimationFrame |
-| Persistência local | localStorage (tema, modo daltônico, recordes) |
+| Persistência local | localStorage (tema, modo daltônico, recordes, estatísticas, nome do jogador) |
 | Hospedagem | GitHub Pages |
 
 ---

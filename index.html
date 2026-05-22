@@ -460,25 +460,26 @@ function renderBoard() {
   });
 }
 
-function updateBoard(anterior, nova) {
-  nova.forEach((card, i) => {
-    const el  = document.getElementById(`c${i}`);
+function syncBoard() {
+  G.cards.forEach((card, i) => {
+    const el = document.getElementById(`c${i}`);
     if (!el) return;
-    const old = anterior[i] || {};
 
-    if (card.matched && !old.matched) {
+    if (card.matched && !el.classList.contains('matched')) {
       setTimeout(() => {
         el.classList.add('matched');
         el.classList.remove('flipped');
         el.style.pointerEvents = 'none';
       }, 50);
-    } else if (card.flipped && !old.flipped && !card.matched) {
-      setTimeout(() => el.classList.add('flipped'), 50);
-      el.style.pointerEvents = 'none';
-    } else if (!card.flipped && old.flipped && !card.matched) {
-      el.classList.remove('flipped');
-      el.style.pointerEvents = '';
-      el.onclick = () => onCardClick(i);
+    } else if (!card.matched) {
+      const deveVirar = !!card.flipped;
+      if (deveVirar && !el.classList.contains('flipped')) {
+        setTimeout(() => el.classList.add('flipped'), 50);
+        el.style.pointerEvents = 'none';
+      } else if (!deveVirar && el.classList.contains('flipped')) {
+        el.classList.remove('flipped');
+        el.style.pointerEvents = '';
+      }
     }
   });
 }
@@ -809,7 +810,7 @@ function iniciarOnline(codigo) {
       const e = snap.val();
       if (!e || !e.cards) return;
 
-      const cardsAnterior = G.cards.length ? G.cards.map(c => ({ ...c })) : [];
+      const primeiraVez = G.cards.length === 0;
 
       G.cards     = e.cards;
       G.cur       = e.cur;
@@ -818,10 +819,10 @@ function iniciarOnline(codigo) {
       e.players.forEach((p, i) => { G.players[i].score = p.score; });
       G.busy = G.flipped.length >= 2;
 
-      if (cardsAnterior.length === 0) {
+      if (primeiraVez) {
         renderBoard();
       } else {
-        updateBoard(cardsAnterior, G.cards);
+        syncBoard();
       }
       refreshScores();
       setTurnBar();

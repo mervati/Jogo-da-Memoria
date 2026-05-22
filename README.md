@@ -4,6 +4,14 @@ Jogo da memória multijogador com modos offline, contra IA e online em tempo rea
 
 🔗 **[Jogar agora](https://mervati.github.io/Jogo-da-Memoria)**
 
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black)
+![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222222?style=flat&logo=githubpages&logoColor=white)
+![Sem dependências](https://img.shields.io/badge/dependências-nenhuma-brightgreen?style=flat)
+![Web Audio API](https://img.shields.io/badge/Web%20Audio%20API-✓-orange?style=flat)
+
 ---
 
 ## Funcionalidades

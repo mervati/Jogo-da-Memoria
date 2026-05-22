@@ -447,7 +447,7 @@ function renderScores() {
     el.id = `ps${i}`;
     el.style.cssText = `--pc:${p.color};--pc-rgb:${p.rgb}`;
     const suaVezVisivel = G.online && i === G.meuIndex && i === G.cur;
-    el.innerHTML = `<div class="sua-vez" style="font-size:.7rem;color:#4fc3f7;font-weight:700;margin-bottom:2px;display:${suaVezVisivel ? '' : 'none'}">▶ SUA VEZ</div><div class="pn">${p.isAI ? '🤖' : '👤'} ${p.name}</div><div class="pp">${p.score}</div>`;
+    el.innerHTML = `<div class="sua-vez" style="font-size:.7rem;color:#4fc3f7;font-weight:700;margin-bottom:2px;display:${suaVezVisivel ? '' : 'none'}">▶ SUA VEZ</div><div class="pn">${p.isAI ? '🤖' : '👤'} ${sanitize(p.name)}</div><div class="pp">${p.score}</div>`;
     panel.appendChild(el);
   });
 }
@@ -469,7 +469,7 @@ function setTurnBar(thinking = false) {
   const p  = G.players[G.cur];
   const ic = p.isAI ? '🤖' : '👤';
   const tx = thinking ? ` <em style="color:#666;font-style:normal">(pensando…)</em>` : '';
-  document.getElementById('turn-bar').innerHTML = `${ic} Vez de <span>${p.name}</span>${tx}`;
+  document.getElementById('turn-bar').innerHTML = `${ic} Vez de <span>${sanitize(p.name)}</span>${tx}`;
 }
 
 // ─────────────────────────────────────────────
@@ -620,7 +620,7 @@ function endGame() {
     const el   = document.createElement('div');
     el.className = 'final-item';
     el.style.cssText = `--pc:${p.color}`;
-    el.innerHTML = `<span>${medals[i]} ${p.name}</span><span class="fi-score">${p.score} par${p.score !== 1 ? 'es' : ''}</span>`;
+    el.innerHTML = `<span>${medals[i]} ${sanitize(p.name)}</span><span class="fi-score">${p.score} par${p.score !== 1 ? 'es' : ''}</span>`;
     list.appendChild(el);
   });
 
@@ -745,14 +745,14 @@ function iniciarOnline(codigo) {
         G.busy = true;
         let segundos = 10;
         const turnBar = document.getElementById('turn-bar');
-        turnBar.innerHTML = `<span style="color:#e94560">⚠️ ${G.players[outroIndex].name} saiu da sala. Voltando ao menu em ${segundos}s...</span>`;
+        turnBar.innerHTML = `<span style="color:#e94560">⚠️ ${sanitize(G.players[outroIndex].name)} saiu da sala. Voltando ao menu em ${segundos}s...</span>`;
         const timer = setInterval(() => {
           segundos--;
           if (segundos <= 0) {
             clearInterval(timer);
             showScreen('screen-menu');
           } else {
-            turnBar.innerHTML = `<span style="color:#e94560">⚠️ ${G.players[outroIndex].name} saiu da sala. Voltando ao menu em ${segundos}s...</span>`;
+            turnBar.innerHTML = `<span style="color:#e94560">⚠️ ${sanitize(G.players[outroIndex].name)} saiu da sala. Voltando ao menu em ${segundos}s...</span>`;
           }
         }, 1000);
       }
@@ -799,6 +799,10 @@ function checkMatchOnline() {
 // ─────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────
+function sanitize(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));

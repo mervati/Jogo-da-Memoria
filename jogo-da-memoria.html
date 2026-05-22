@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo da Memória</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #1a1a2e;
+  color: #eee;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.screen { display: none; width: 100%; max-width: 960px; }
+.screen.active { display: flex; flex-direction: column; align-items: center; }
+
+/* ── MENU ── */
+.menu-emoji { font-size: 4rem; margin-bottom: 10px; }
+.menu-title {
+  font-size: 2.8rem; font-weight: 800; text-align: center;
+  background: linear-gradient(135deg, #e94560, #4fc3f7);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.menu-sub { color: #777; margin-bottom: 40px; font-size: 1rem; }
+.menu-credit {
+  margin-top: 32px; font-size: .78rem;
+  color: #444; letter-spacing: .5px;
+}
+.menu-credit span { color: #666; font-weight: 600; }
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 13px 30px; border: none; border-radius: 50px;
+  font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #e94560, #c62a47); color: #fff;
+  box-shadow: 0 4px 20px rgba(233,69,96,.4);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(233,69,96,.55); }
+.btn-secondary {
+  background: rgba(255,255,255,.08); color: #ddd;
+  border: 1px solid rgba(255,255,255,.18);
+}
+.btn-secondary:hover { background: rgba(255,255,255,.16); }
+
+/* ── SETUP ── */
+.setup-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 28px; }
+.setup-section { width: 100%; max-width: 620px; margin-bottom: 22px; }
+.setup-label {
+  font-size: .78rem; text-transform: uppercase; letter-spacing: 1.2px;
+  color: #666; margin-bottom: 10px;
+}
+.option-group { display: flex; gap: 10px; flex-wrap: wrap; }
+.opt {
+  padding: 10px 20px; border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04); color: #ccc;
+  cursor: pointer; font-size: .92rem; transition: all .2s; user-select: none;
+}
+.opt:hover { border-color: rgba(255,255,255,.35); color: #fff; }
+.opt.sel { border-color: #e94560; background: rgba(233,69,96,.18); color: #fff; }
+.player-inputs { display: flex; flex-direction: column; gap: 8px; }
+.p-input {
+  padding: 10px 16px; border-radius: 10px;
+  border: 2px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05); color: #eee;
+  font-size: .93rem; outline: none; transition: border-color .2s;
+}
+.p-input:focus { border-color: #4fc3f7; }
+.p-input::placeholder { color: #444; }
+.setup-actions { display: flex; gap: 12px; margin-top: 8px; }
+
+/* ── GAME ── */
+#screen-game { gap: 16px; }
+.scores-panel { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.pscore {
+  padding: 8px 18px; border-radius: 10px;
+  background: rgba(255,255,255,.05);
+  border: 2px solid transparent; text-align: center;
+  min-width: 100px; transition: all .3s;
+}
+.pscore.active {
+  border-color: var(--pc);
+  background: rgba(var(--pc-rgb),.15);
+  box-shadow: 0 0 16px rgba(var(--pc-rgb),.3);
+}
+.pscore .pn { font-size: .78rem; color: #888; }
+.pscore .pp { font-size: 1.4rem; font-weight: 800; color: var(--pc); }
+
+.turn-bar {
+  font-size: .95rem; color: #888; min-height: 22px; text-align: center;
+}
+.turn-bar span { color: #fff; font-weight: 700; }
+
+.board { display: grid; gap: 9px; }
+
+.card { aspect-ratio: 1; cursor: pointer; perspective: 700px; }
+.card-inner {
+  width: 100%; height: 100%; position: relative;
+  transform-style: preserve-3d; transition: transform .42s ease;
+}
+.card.flipped .card-inner,
+.card.matched .card-inner { transform: rotateY(180deg); }
+.face {
+  position: absolute; width: 100%; height: 100%;
+  border-radius: 12px; backface-visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.back {
+  background: linear-gradient(135deg, #16213e, #0f3460);
+  border: 2px solid rgba(255,255,255,.09);
+  font-size: 1.4rem; color: rgba(255,255,255,.1);
+}
+.front { background: #fff; transform: rotateY(180deg); font-size: 2rem; }
+.card.matched .front { background: #e8f5e9; }
+.card:not(.flipped):not(.matched):hover .card-inner { transform: rotateY(12deg); }
+
+.game-menu-btn { margin-top: 4px; }
+
+/* ── END ── */
+.trophy { font-size: 4rem; margin-bottom: 12px; }
+.winner-txt { font-size: 1.9rem; font-weight: 800; margin-bottom: 24px; text-align: center; }
+.final-list { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 400px; margin-bottom: 28px; }
+.final-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; background: rgba(255,255,255,.05);
+  border-radius: 10px; border-left: 4px solid var(--pc);
+}
+.final-item .fi-score { font-weight: 800; color: var(--pc); }
+.end-btns { display: flex; gap: 12px; }
+
+@media (max-width: 520px) {
+  .menu-title { font-size: 2rem; }
+  .front { font-size: 1.5rem; }
+  .back { font-size: 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ MENU ═══ -->
+<div id="screen-menu" class="screen active">
+  <div class="menu-emoji">🃏</div>
+  <h1 class="menu-title">Jogo da Memória</h1>
+  <p class="menu-sub">Encontre todos os pares e derrote seus adversários!</p>
+  <button class="btn btn-primary" onclick="showScreen('screen-setup')">Jogar</button>
+  <p class="menu-credit">Desenvolvido por <span>Mariana Ervati</span></p>
+</div>
+
+<!-- ═══ SETUP ═══ -->
+<div id="screen-setup" class="screen">
+  <h2 class="setup-title">⚙️ Configurar Partida</h2>
+
+  <!-- Modo -->
+  <div class="setup-section">
+    <div class="setup-label">Modo de Jogo</div>
+    <div class="option-group">
+      <div class="opt sel" data-g="mode" data-v="ai" onclick="pick(this)">🤖 Humano × Máquina</div>
+      <div class="opt"     data-g="mode" data-v="multi" onclick="pick(this)">👥 Multijogador (2–4)</div>
+    </div>
+  </div>
+
+  <!-- Nome do jogador (modo AI) -->
+  <div class="setup-section" id="sec-hname">
+    <div class="setup-label">Seu Nome</div>
+    <div class="player-inputs">
+      <input class="p-input" id="human-name" type="text" placeholder="Jogador 1" maxlength="20"
+        style="border-color:#e9456066;">
+    </div>
+  </div>
+
+  <!-- Dificuldade (modo AI) -->
+  <div class="setup-section" id="sec-diff">
+    <div class="setup-label">Dificuldade da Máquina</div>
+    <div class="option-group">
+      <div class="opt sel" data-g="diff" data-v="easy"   onclick="pick(this)">😊 Fácil</div>
+      <div class="opt"     data-g="diff" data-v="medium" onclick="pick(this)">🧠 Médio</div>
+      <div class="opt"     data-g="diff" data-v="hard"   onclick="pick(this)">😈 Difícil</div>
+    </div>
+  </div>
+
+  <!-- Número de jogadores (modo multi) -->
+  <div class="setup-section" id="sec-nump" style="display:none;">
+    <div class="setup-label">Número de Jogadores</div>
+    <div class="option-group">
+      <div class="opt sel" data-g="np" data-v="2" onclick="pick(this);buildNames()">2 Jogadores</div>
+      <div class="opt"     data-g="np" data-v="3" onclick="pick(this);buildNames()">3 Jogadores</div>
+      <div class="opt"     data-g="np" data-v="4" onclick="pick(this);buildNames()">4 Jogadores</div>
+    </div>
+  </div>
+
+  <!-- Nomes dos jogadores (modo multi) -->
+  <div class="setup-section" id="sec-names" style="display:none;">
+    <div class="setup-label">Nomes dos Jogadores</div>
+    <div class="player-inputs" id="names-container"></div>
+  </div>
+
+  <!-- Tamanho do tabuleiro -->
+  <div class="setup-section">
+    <div class="setup-label">Tamanho do Tabuleiro</div>
+    <div class="option-group">
+      <div class="opt sel" data-g="size" data-v="4x4" onclick="pick(this)">4 × 4 &nbsp;(8 pares)</div>
+      <div class="opt"     data-g="size" data-v="4x5" onclick="pick(this)">4 × 5 &nbsp;(10 pares)</div>
+      <div class="opt"     data-g="size" data-v="6x6" onclick="pick(this)">6 × 6 &nbsp;(18 pares)</div>
+    </div>
+  </div>
+
+  <div class="setup-actions">
+    <button class="btn btn-secondary" onclick="showScreen('screen-menu')">← Voltar</button>
+    <button class="btn btn-primary"   onclick="startGame()">Iniciar ▶</button>
+  </div>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="screen-game" class="screen">
+  <div class="scores-panel" id="scores-panel"></div>
+  <div class="turn-bar"     id="turn-bar"></div>
+  <div class="board"        id="board"></div>
+  <button class="btn btn-secondary game-menu-btn" onclick="askMenu()">Menu</button>
+</div>
+
+<!-- ═══ END ═══ -->
+<div id="screen-end" class="screen">
+  <div class="trophy">🏆</div>
+  <div class="winner-txt" id="winner-txt"></div>
+  <div class="final-list"  id="final-list"></div>
+  <div class="end-btns">
+    <button class="btn btn-secondary" onclick="showScreen('screen-menu')">Menu</button>
+    <button class="btn btn-primary"   onclick="startGame()">Jogar Novamente</button>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────
+const EMOJIS = [
+  '🐶','🐱','🦊','🐻','🐼','🦁','🐮','🐷','🐸','🐵',
+  '🍕','🍔','🌮','🍣','🍦','🎂','🍩','🍓','🍇','🥑',
+  '🚀','🌈','⚡','🔥','💎','🎮','🎸','🏆','🎯','🌸',
+  '🌊','⭐','🌙','☀️','🦋','🎭','🎪','🎨','🦄','🌴'
+];
+
+const COLORS     = ['#e94560','#4fc3f7','#81c784','#ffb74d'];
+const COLORS_RGB = ['233,69,96','79,195,247','129,199,132','255,183,77'];
+
+const SIZES = {
+  '4x4': { cols: 4, pairs: 8  },
+  '4x5': { cols: 5, pairs: 10 },
+  '6x6': { cols: 6, pairs: 18 }
+};
+
+// ─────────────────────────────────────────────
+// CONFIG STATE (setup screen values)
+// ─────────────────────────────────────────────
+const cfg = { mode:'ai', diff:'easy', np:2, size:'4x4' };
+
+// ─────────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────────
+let G = {};
+
+// ─────────────────────────────────────────────
+// SETUP HELPERS
+// ─────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function pick(el) {
+  const g = el.dataset.g;
+  document.querySelectorAll(`[data-g="${g}"]`).forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  cfg[g] = el.dataset.v;
+  if (g === 'np') cfg.np = parseInt(el.dataset.v);
+
+  if (g === 'mode') {
+    const ai = cfg.mode === 'ai';
+    document.getElementById('sec-hname').style.display = ai ? '' : 'none';
+    document.getElementById('sec-diff').style.display  = ai ? '' : 'none';
+    document.getElementById('sec-nump').style.display  = ai ? 'none' : '';
+    document.getElementById('sec-names').style.display = ai ? 'none' : '';
+    if (!ai) buildNames();
+  }
+}
+
+function buildNames() {
+  const n   = cfg.np;
+  const box = document.getElementById('names-container');
+  box.innerHTML = '';
+  document.getElementById('sec-names').style.display = '';
+  for (let i = 0; i < n; i++) {
+    const inp = document.createElement('input');
+    inp.className   = 'p-input';
+    inp.type        = 'text';
+    inp.placeholder = `Jogador ${i + 1}`;
+    inp.maxLength   = 20;
+    inp.style.borderColor = COLORS[i] + '55';
+    box.appendChild(inp);
+  }
+}
+
+// ─────────────────────────────────────────────
+// START
+// ─────────────────────────────────────────────
+function startGame() {
+  const size = SIZES[cfg.size];
+
+  // Build players
+  const players = [];
+  if (cfg.mode === 'ai') {
+    const humanName = (document.getElementById('human-name').value.trim()) || 'Você';
+    players.push({ name: humanName,  score: 0, isAI: false, color: COLORS[0], rgb: COLORS_RGB[0] });
+    players.push({ name: 'Máquina', score: 0, isAI: true,  color: COLORS[1], rgb: COLORS_RGB[1] });
+  } else {
+    const inputs = document.querySelectorAll('#names-container input');
+    for (let i = 0; i < cfg.np; i++) {
+      const name = (inputs[i] && inputs[i].value.trim()) || `Jogador ${i + 1}`;
+      players.push({ name, score: 0, isAI: false, color: COLORS[i], rgb: COLORS_RGB[i] });
+    }
+  }
+
+  // Build shuffled cards
+  const picked = shuffle([...EMOJIS]).slice(0, size.pairs);
+  const values = shuffle([...picked, ...picked]);
+
+  G = {
+    cards: values.map((emoji, id) => ({ id, emoji, flipped: false, matched: false })),
+    flipped: [],
+    players,
+    cur: 0,
+    busy: false,
+    aiMem: {},        // { cardIndex: emoji }
+    totalPairs: size.pairs,
+    donePairs: 0,
+    cols: size.cols
+  };
+
+  renderScores();
+  renderBoard();
+  setTurnBar();
+  showScreen('screen-game');
+
+  // If somehow AI goes first (shouldn't happen), trigger it
+  if (G.players[G.cur].isAI) scheduleAI();
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  board.style.gridTemplateColumns = `repeat(${G.cols}, 1fr)`;
+
+  // Responsive card size
+  const vw        = Math.min(window.innerWidth - 40, 960);
+  const cardSize  = Math.floor((vw - G.cols * 9) / G.cols);
+  const capped    = Math.min(cardSize, 110);
+  board.style.width = `${capped * G.cols + 9 * (G.cols - 1)}px`;
+
+  G.cards.forEach((card, i) => {
+    const el = document.createElement('div');
+    el.className = 'card' + (card.flipped ? ' flipped' : '') + (card.matched ? ' matched' : '');
+    el.id = `c${i}`;
+    el.innerHTML = `
+      <div class="card-inner">
+        <div class="face back">🃏</div>
+        <div class="face front">${card.emoji}</div>
+      </div>`;
+    if (!card.flipped && !card.matched) el.addEventListener('click', () => onCardClick(i));
+    board.appendChild(el);
+  });
+}
+
+function renderScores() {
+  const panel = document.getElementById('scores-panel');
+  panel.innerHTML = '';
+  G.players.forEach((p, i) => {
+    const el = document.createElement('div');
+    el.className = 'pscore' + (i === G.cur ? ' active' : '');
+    el.id = `ps${i}`;
+    el.style.cssText = `--pc:${p.color};--pc-rgb:${p.rgb}`;
+    el.innerHTML = `<div class="pn">${p.isAI ? '🤖' : '👤'} ${p.name}</div><div class="pp">${p.score}</div>`;
+    panel.appendChild(el);
+  });
+}
+
+function refreshScores() {
+  G.players.forEach((p, i) => {
+    const el = document.getElementById(`ps${i}`);
+    if (!el) return;
+    el.className = 'pscore' + (i === G.cur ? ' active' : '');
+    el.querySelector('.pp').textContent = p.score;
+  });
+}
+
+function setTurnBar(thinking = false) {
+  const p  = G.players[G.cur];
+  const ic = p.isAI ? '🤖' : '👤';
+  const tx = thinking ? ` <em style="color:#666;font-style:normal">(pensando…)</em>` : '';
+  document.getElementById('turn-bar').innerHTML = `${ic} Vez de <span>${p.name}</span>${tx}`;
+}
+
+// ─────────────────────────────────────────────
+// INTERACTION
+// ─────────────────────────────────────────────
+function onCardClick(i) {
+  if (G.busy) return;
+  if (G.players[G.cur].isAI) return;
+  if (G.cards[i].matched || G.cards[i].flipped) return;
+  if (G.flipped.length >= 2) return;
+  revealCard(i);
+}
+
+function revealCard(i) {
+  G.cards[i].flipped = true;
+  const el = document.getElementById(`c${i}`);
+  if (el) el.classList.add('flipped');
+  G.flipped.push(i);
+  if (G.flipped.length === 2) {
+    G.busy = true;
+    setTimeout(checkMatch, 950);
+  }
+}
+
+function checkMatch() {
+  const [a, b] = G.flipped;
+  const hit    = G.cards[a].emoji === G.cards[b].emoji;
+
+  // AI always learns from revealed cards
+  G.aiMem[a] = G.cards[a].emoji;
+  G.aiMem[b] = G.cards[b].emoji;
+
+  if (hit) {
+    G.cards[a].matched = G.cards[b].matched = true;
+    document.getElementById(`c${a}`).classList.add('matched');
+    document.getElementById(`c${b}`).classList.add('matched');
+    G.players[G.cur].score++;
+    G.donePairs++;
+    refreshScores();
+
+    if (G.donePairs === G.totalPairs) { setTimeout(endGame, 600); return; }
+
+    G.flipped = [];
+    G.busy    = false;
+    // Same player plays again
+    if (G.players[G.cur].isAI) scheduleAI();
+  } else {
+    // Flip back
+    [a, b].forEach(i => {
+      G.cards[i].flipped = false;
+      document.getElementById(`c${i}`).classList.remove('flipped');
+    });
+    G.flipped = [];
+
+    G.cur = (G.cur + 1) % G.players.length;
+    setTurnBar();
+    refreshScores();
+    G.busy = false;
+
+    if (G.players[G.cur].isAI) scheduleAI();
+  }
+}
+
+// ─────────────────────────────────────────────
+// AI
+// ─────────────────────────────────────────────
+function scheduleAI() {
+  G.busy = true;
+  setTurnBar(true);
+  setTimeout(aiTurn, 900);
+}
+
+function aiTurn() {
+  const unmatched   = G.cards.map((_, i) => i).filter(i => !G.cards[i].matched);
+  const diff        = cfg.diff;
+
+  // Group known cards by emoji
+  const byEmoji = {};
+  for (const [k, v] of Object.entries(G.aiMem)) {
+    const i = +k;
+    if (G.cards[i].matched) continue;
+    (byEmoji[v] = byEmoji[v] || []).push(i);
+  }
+  const pairs = Object.values(byEmoji).filter(arr => arr.length >= 2);
+
+  // Decide whether to exploit memory
+  const exploit = diff === 'hard' ? true
+                : diff === 'medium' ? Math.random() < .6
+                : false;
+
+  let first, second;
+
+  if (pairs.length > 0 && exploit) {
+    // Play a known pair
+    const p = pairs[Math.floor(Math.random() * pairs.length)];
+    [first, second] = p;
+  } else {
+    // Pick an unlearned card first
+    const unknown = unmatched.filter(i => !(i in G.aiMem));
+    const pool1   = unknown.length > 0 ? unknown : unmatched;
+    first = rand(pool1);
+
+    // Check if we know a match for `first`
+    const fEmoji     = G.cards[first].emoji;
+    const knownMatch = (byEmoji[fEmoji] || []).find(i => i !== first);
+
+    if (knownMatch !== undefined && exploit) {
+      second = knownMatch;
+    } else {
+      const rest   = unmatched.filter(i => i !== first);
+      const unk2   = rest.filter(i => !(i in G.aiMem));
+      const pool2  = unk2.length > 0 ? unk2 : rest;
+      second = rand(pool2);
+    }
+  }
+
+  setTurnBar(false);
+  // Flip first, then second
+  setTimeout(() => {
+    revealCard(first);
+    setTimeout(() => revealCard(second), 700);
+  }, 200);
+}
+
+// ─────────────────────────────────────────────
+// END
+// ─────────────────────────────────────────────
+function endGame() {
+  const sorted  = [...G.players].sort((a, b) => b.score - a.score);
+  const top     = sorted[0].score;
+  const winners = sorted.filter(p => p.score === top);
+
+  document.getElementById('winner-txt').textContent =
+    winners.length > 1 ? '🤝 Empate!' : `🏆 ${winners[0].name} venceu!`;
+
+  const list  = document.getElementById('final-list');
+  list.innerHTML = '';
+  const medals = ['🥇','🥈','🥉','4️⃣'];
+  sorted.forEach((p, i) => {
+    const el   = document.createElement('div');
+    el.className = 'final-item';
+    el.style.cssText = `--pc:${p.color}`;
+    el.innerHTML = `<span>${medals[i]} ${p.name}</span><span class="fi-score">${p.score} par${p.score !== 1 ? 'es' : ''}</span>`;
+    list.appendChild(el);
+  });
+
+  showScreen('screen-end');
+}
+
+function askMenu() {
+  if (confirm('Sair da partida atual?')) showScreen('screen-menu');
+}
+
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function rand(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+</script>
+</body>
+</html>

@@ -155,7 +155,31 @@ body {
   <h1 class="menu-title">Jogo da Memória</h1>
   <p class="menu-sub">Encontre todos os pares e derrote seus adversários!</p>
   <button class="btn btn-primary" onclick="showScreen('screen-setup')">Jogar</button>
+  <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-online')">🌐 Jogar Online</button>
   <p class="menu-credit">Desenvolvido por <span>Mariana Ervati</span></p>
+</div>
+
+<!-- ═══ ONLINE ═══ -->
+<div id="screen-online" class="screen">
+  <h2 class="setup-title">🌐 Jogar Online</h2>
+
+  <div class="setup-section">
+    <div class="setup-label">Seu Nome</div>
+    <input class="p-input" id="online-name" type="text" placeholder="Digite seu nome" maxlength="20">
+  </div>
+
+  <div class="setup-actions" style="flex-direction:column; align-items:center; gap:14px;">
+    <button class="btn btn-primary" onclick="criarSala()">➕ Criar Sala</button>
+
+    <div style="display:flex; gap:10px; align-items:center;">
+      <input class="p-input" id="codigo-sala" type="text" placeholder="Código da sala" maxlength="6" style="width:160px; text-transform:uppercase;">
+      <button class="btn btn-secondary" onclick="entrarSala()">Entrar</button>
+    </div>
+
+    <div id="online-status" style="color:#888; font-size:.9rem; min-height:20px;"></div>
+  </div>
+
+  <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
 </div>
 
 <!-- ═══ SETUP ═══ -->
@@ -434,10 +458,18 @@ function setTurnBar(thinking = false) {
 // ─────────────────────────────────────────────
 function onCardClick(i) {
   if (G.busy) return;
-  if (G.players[G.cur].isAI) return;
   if (G.cards[i].matched || G.cards[i].flipped) return;
   if (G.flipped.length >= 2) return;
-  revealCard(i);
+
+  if (G.online) {
+    if (G.cur !== G.meuIndex) return;
+    const cards = G.cards.map(c => ({ ...c }));
+    cards[i].flipped = true;
+    salaRef.child('estado').update({ cards, flipped: [...G.flipped, i] });
+  } else {
+    if (G.players[G.cur].isAI) return;
+    revealCard(i);
+  }
 }
 
 function revealCard(i) {
@@ -578,6 +610,107 @@ function endGame() {
 
 function askMenu() {
   if (confirm('Sair da partida atual?')) showScreen('screen-menu');
+}
+
+// ─────────────────────────────────────────────
+// ONLINE
+// ─────────────────────────────────────────────
+let salaRef = null;
+let meuIndex = 0;
+
+function criarSala() {
+  const nome   = document.getElementById('online-name').value.trim() || 'Jogador 1';
+  const codigo = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  salaRef = db.ref('salas/' + codigo);
+  salaRef.set({ jogadores: { 0: { nome, score: 0 } }, status: 'aguardando' });
+
+  meuIndex = 0;
+  document.getElementById('online-status').innerHTML =
+    `Sala criada! Código: <strong style="color:#4fc3f7">${codigo}</strong><br>Aguardando outro jogador...`;
+
+  salaRef.child('status').on('value', snap => {
+    if (snap.val() === 'jogando') iniciarOnline(codigo);
+  });
+}
+
+function entrarSala() {
+  const nome   = document.getElementById('online-name').value.trim() || 'Jogador 2';
+  const codigo = document.getElementById('codigo-sala').value.trim().toUpperCase();
+  if (!codigo) return;
+
+  salaRef = db.ref('salas/' + codigo);
+  salaRef.once('value', snap => {
+    if (!snap.exists()) {
+      document.getElementById('online-status').textContent = 'Sala não encontrada.';
+      return;
+    }
+    salaRef.child('jogadores/1').set({ nome, score: 0 });
+    salaRef.child('status').set('jogando');
+    meuIndex = 1;
+    iniciarOnline(codigo);
+  });
+}
+
+function iniciarOnline(codigo) {
+  salaRef.once('value', snap => {
+    const sala      = snap.val();
+    const jogadores = sala.jogadores;
+
+    G = {
+      cards: [], flipped: [], cur: 0, busy: false, aiMem: {},
+      totalPairs: SIZES['4x4'].pairs, donePairs: 0, cols: SIZES['4x4'].cols,
+      online: true, meuIndex,
+      players: [
+        { name: jogadores[0].nome, score: 0, isAI: false, color: COLORS[0], rgb: COLORS_RGB[0] },
+        { name: jogadores[1].nome, score: 0, isAI: false, color: COLORS[1], rgb: COLORS_RGB[1] }
+      ]
+    };
+
+    if (meuIndex === 0) {
+      const picked = shuffle([...EMOJIS]).slice(0, G.totalPairs);
+      const cards  = shuffle([...picked, ...picked]).map((emoji, id) => ({ id, emoji, flipped: false, matched: false }));
+      salaRef.child('estado').set({ cards, cur: 0, flipped: [], donePairs: 0, players: [{ score: 0 }, { score: 0 }] });
+    }
+
+    showScreen('screen-game');
+    renderScores();
+
+    salaRef.child('estado').on('value', snap => {
+      const e = snap.val();
+      if (!e || !e.cards) return;
+
+      G.cards     = e.cards;
+      G.cur       = e.cur;
+      G.flipped   = e.flipped || [];
+      G.donePairs = e.donePairs || 0;
+      e.players.forEach((p, i) => { G.players[i].score = p.score; });
+      G.busy = G.flipped.length >= 2;
+
+      renderBoard();
+      refreshScores();
+      setTurnBar();
+
+      if (G.flipped.length === 2 && G.cur === meuIndex) setTimeout(checkMatchOnline, 950);
+      if (G.donePairs === G.totalPairs) setTimeout(endGame, 600);
+    });
+  });
+}
+
+function checkMatchOnline() {
+  const [a, b] = G.flipped;
+  const hit    = G.cards[a].emoji === G.cards[b].emoji;
+  const cards  = G.cards.map(c => ({ ...c }));
+  const placar = G.players.map(p => ({ score: p.score }));
+
+  if (hit) {
+    cards[a].matched = cards[b].matched = true;
+    placar[G.cur].score++;
+    salaRef.child('estado').update({ cards, flipped: [], donePairs: G.donePairs + 1, players: placar });
+  } else {
+    cards[a].flipped = cards[b].flipped = false;
+    salaRef.child('estado').update({ cards, flipped: [], cur: (G.cur + 1) % 2, players: placar });
+  }
 }
 
 // ─────────────────────────────────────────────

@@ -64,6 +64,7 @@
   <div class="screen-tabs">
     <button class="screen-tab sel" onclick="switchTab('tab-online-jogar', this)">🌐 Jogar Online</button>
     <button class="screen-tab"     onclick="switchTab('tab-ranking', this)">🌍 Ranking Global</button>
+    <button class="screen-tab"     onclick="switchTab('tab-stats-online', this)">📊 Stats</button>
   </div>
 
   <!-- Aba: Jogar Online -->
@@ -71,6 +72,7 @@
     <div class="setup-section">
       <div class="setup-label">Seu Nome</div>
       <input class="p-input" id="online-name" type="text" placeholder="Digite seu nome" maxlength="20">
+      <div class="nome-saved-badge" id="badge-online">💾 Nome salvo</div>
     </div>
 
     <div class="setup-section">
@@ -106,6 +108,9 @@
     <div id="ranking-lista"></div>
     <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
   </div>
+
+  <!-- Aba: Stats Online -->
+  <div id="tab-stats-online" class="tab-panel" style="display:none"></div>
 </div>
 </div>
 
@@ -113,8 +118,9 @@
 <div id="screen-setup" class="screen">
 <div class="glass-card">
   <div class="screen-tabs">
-    <button class="screen-tab sel" onclick="switchTab('tab-jogar', this)">⚙️ Jogar</button>
+    <button class="screen-tab sel" onclick="switchTab('tab-jogar', this)">▶️ Jogar</button>
     <button class="screen-tab"     onclick="switchTab('tab-recordes', this)">🏅 Recordes</button>
+    <button class="screen-tab"     onclick="switchTab('tab-stats-offline', this)">📊 Stats</button>
   </div>
 
   <!-- Aba: Jogar -->
@@ -134,6 +140,7 @@
       <div class="player-inputs">
         <input class="p-input" id="human-name" type="text" placeholder="Jogador 1" maxlength="20"
           style="border-color:#e9456066;">
+        <div class="nome-saved-badge" id="badge-human">💾 Nome salvo</div>
       </div>
     </div>
 
@@ -184,6 +191,9 @@
     <div id="records-list"></div>
     <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
   </div>
+
+  <!-- Aba: Stats Offline -->
+  <div id="tab-stats-offline" class="tab-panel" style="display:none"></div>
 </div>
 </div>
 

@@ -286,6 +286,11 @@ body {
 }
 .p-input:focus { border-color: var(--accent2); }
 .p-input::placeholder { color: #444; }
+.nome-saved-badge {
+  font-size: .75rem; color: var(--txt-dim);
+  margin-top: 5px; display: none; align-items: center; gap: 4px;
+}
+.nome-saved-badge.vis { display: flex; }
 .setup-actions { display: flex; gap: 12px; margin-top: 8px; }
 
 /* ── GAME ── */
@@ -381,6 +386,19 @@ body {
 }
 .card:not(.flipped):not(.matched):hover .card-inner { transform: rotateY(12deg); }
 
+.back { overflow: hidden; }
+.card-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,.30);
+  transform: scale(0);
+  animation: rippleAnim .5s linear forwards;
+  pointer-events: none;
+}
+@keyframes rippleAnim {
+  to { transform: scale(4); opacity: 0; }
+}
+
 .game-menu-btn { margin-top: 4px; }
 
 /* ── END ── */
@@ -465,6 +483,40 @@ body {
 .rank-tab.sel { border-color: var(--accent); background: rgba(var(--accent-rgb),.18); color: #fff; }
 .rank-loading { color: var(--txt-dim); text-align: center; padding: 32px 0; }
 .rank-empty { color: var(--txt-dim); text-align: center; padding: 32px 0; line-height: 1.8; }
+
+/* ── ESTATÍSTICAS ── */
+.stats-empty { color: var(--txt-dim); text-align: center; padding: 32px 0; line-height: 1.8; }
+.stats-summary {
+  display: flex; gap: 12px; justify-content: center;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.stats-sum-item {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(255,255,255,.06); border-radius: 12px;
+  padding: 12px 20px; min-width: 80px;
+}
+.stats-sum-val { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+.stats-sum-lbl { font-size: .72rem; color: var(--txt-dim); margin-top: 2px; text-align: center; }
+.stats-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; width: 100%;
+}
+@media (max-width: 520px) { .stats-grid { grid-template-columns: 1fr; } }
+.stats-card {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px; padding: 14px;
+}
+.stats-card-title {
+  font-size: .95rem; font-weight: 700; color: var(--accent2);
+  margin-bottom: 10px; text-align: center;
+}
+.stats-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: .82rem; padding: 3px 0; color: var(--txt-muted);
+}
+.stats-row strong { color: #fff; font-weight: 700; }
+.stats-row small  { color: var(--txt-dim); font-size: .72rem; }
+.stats-divider    { border: none; border-top: 1px solid rgba(255,255,255,.07); margin: 7px 0; }
 
 /* ── REACTIONS ── */
 .reaction-bar {

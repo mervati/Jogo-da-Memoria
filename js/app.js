@@ -57,6 +57,19 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   playMusic();
+  if (id === 'screen-online') limparStatusOnline();
+}
+
+function limparStatusOnline() {
+  const st = document.getElementById('online-status');
+  if (st) st.innerHTML = '';
+  const cod = document.getElementById('codigo-sala');
+  if (cod) cod.value = '';
+  // cancela listener de status se sala estava aguardando jogador
+  if (salaRef) {
+    salaRef.child('status').off();
+    salaRef = null;
+  }
 }
 
 function switchTab(panelId, tabEl) {
@@ -65,8 +78,10 @@ function switchTab(panelId, tabEl) {
   card.querySelectorAll('.screen-tab').forEach(t => t.classList.remove('sel'));
   document.getElementById(panelId).style.display = 'block';
   tabEl.classList.add('sel');
-  if (panelId === 'tab-recordes') mostrarRecordes();
-  if (panelId === 'tab-ranking')  carregarRanking('4x4');
+  if (panelId === 'tab-recordes')      mostrarRecordes();
+  if (panelId === 'tab-ranking')       carregarRanking('4x4');
+  if (panelId === 'tab-stats-offline') mostrarEstatisticasOffline();
+  if (panelId === 'tab-stats-online')  mostrarEstatisticasOnline();
 }
 
 function pick(el) {
@@ -174,7 +189,7 @@ function renderBoard() {
         <div class="face back">🃏</div>
         <div class="face front">${card.emoji}</div>
       </div>`;
-    if (!card.flipped && !card.matched) el.addEventListener('click', () => onCardClick(i));
+    if (!card.flipped && !card.matched) el.addEventListener('click', (e) => { criarRipple(el, e); onCardClick(i); });
     board.appendChild(el);
   });
 }
@@ -268,6 +283,18 @@ function setTurnBar(thinking = false) {
 // ─────────────────────────────────────────────
 // INTERACTION
 // ─────────────────────────────────────────────
+function criarRipple(el, e) {
+  const back = el.querySelector('.back');
+  if (!back) return;
+  const rect = back.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  const span = document.createElement('span');
+  span.className = 'card-ripple';
+  span.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size/2}px;top:${e.clientY - rect.top - size/2}px`;
+  back.appendChild(span);
+  span.addEventListener('animationend', () => span.remove());
+}
+
 function onCardClick(i) {
   if (G.busy) return;
   if (G.cards[i].matched || G.cards[i].flipped) return;
@@ -454,6 +481,8 @@ function endGame() {
   } else if (!isAI && winners.length === 1) {
     posRecorde = salvarRecorde(winners[0].name, cfg.size, 'Multi', jogoTempo, jogoTentativas);
   }
+  const ganhouStat = isAI ? (humanP && aiP && humanP.score > aiP.score) : winners.length === 1;
+  registrarStatOffline(cfg.size, ganhouStat, jogoTentativas, jogoTempo);
   document.getElementById('end-record').textContent =
     posRecorde ? `🏅 Novo recorde! ${['','🥇','🥈','🥉','4️⃣','5️⃣'][posRecorde]} Top ${posRecorde}` : '';
 
@@ -551,6 +580,13 @@ function atualizarTimerDisplay() {
   el.style.color = timerSegundos <= 10 ? '#e94560' : '#888';
 }
 
+function copiarCodigo(codigo, btn) {
+  navigator.clipboard.writeText(codigo).then(() => {
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => { btn.textContent = '📋 Copiar'; }, 2000);
+  });
+}
+
 function criarSala() {
   const nome   = document.getElementById('online-name').value.trim() || 'Jogador 1';
   const codigo = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -560,7 +596,16 @@ function criarSala() {
 
   meuIndex = 0;
   document.getElementById('online-status').innerHTML =
-    `Sala criada! Código: <strong style="color:#4fc3f7">${codigo}</strong><br>Aguardando outro jogador...`;
+    `Sala criada!<br>
+     <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0">
+       <strong style="color:#4fc3f7;font-size:1.3rem;letter-spacing:3px">${codigo}</strong>
+       <button onclick="copiarCodigo('${codigo}', this)"
+         style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+                border-radius:8px;color:#eee;padding:4px 10px;cursor:pointer;font-size:.8rem">
+         📋 Copiar
+       </button>
+     </div>
+     Aguardando outro jogador...`;
 
   salaRef.child('status').on('value', snap => {
     if (snap.val() === 'jogando') iniciarOnline(codigo);
@@ -723,12 +768,12 @@ function mostrarFimOnline(s0, s1, t0, t1) {
       <td style="color:#666">${t1}</td>
     </tr>`;
 
+  const tempoOnline = Math.floor((Date.now() - jogoStartOnline) / 1000);
   const isWinner = (s0 > s1 && meuIndex === 0) || (s1 > s0 && meuIndex === 1);
   if (isWinner) {
-    const tempoOnline = Math.floor((Date.now() - jogoStartOnline) / 1000);
-    const meuNome = G.players[meuIndex].name;
-    salvarRankingGlobal(meuNome, cfg.osize, 'Online', jogoTentativas, tempoOnline);
+    salvarRankingGlobal(G.players[meuIndex].name, cfg.osize, 'Online', jogoTentativas, tempoOnline);
   }
+  registrarStatOnline(cfg.osize, isWinner, tempoOnline);
   const revArea    = document.getElementById('revanche-area');
   const outroIndex = meuIndex === 0 ? 1 : 0;
 
@@ -753,19 +798,18 @@ function mostrarFimOnline(s0, s1, t0, t1) {
 
     if (rev.desistiu === true) {
       salaRef.child('revanche').off();
-      if (isWinner) {
-        const nomeAdversario = sanitize(G.players[outroIndex].name);
-        let seg = 5;
-        const atualizar = () => {
-          revArea.innerHTML = `<p style="color:#e94560;font-weight:600">😔 ${nomeAdversario} desistiu.<br>Voltando ao menu em ${seg}s...</p>`;
-        };
-        atualizar();
-        const t = setInterval(() => {
-          seg--;
-          if (seg <= 0) { clearInterval(t); voltarMenuOnline(); }
-          else atualizar();
-        }, 1000);
-      }
+      if (rev.de === meuIndex) return;
+      const nomeAdversario = sanitize(G.players[outroIndex].name);
+      let seg = 5;
+      const atualizar = () => {
+        revArea.innerHTML = `<p style="color:#e94560;font-weight:600">😔 ${nomeAdversario} não quer mais jogar.<br>Voltando ao menu em ${seg}s...</p>`;
+      };
+      atualizar();
+      const t = setInterval(() => {
+        seg--;
+        if (seg <= 0) { clearInterval(t); voltarMenuOnline(); }
+        else atualizar();
+      }, 1000);
       return;
     }
 
@@ -803,7 +847,7 @@ function mostrarFimOnline(s0, s1, t0, t1) {
 }
 
 function sairFimJogo() {
-  if (salaRef) salaRef.child('revanche').set({ desistiu: true });
+  if (salaRef) salaRef.child('revanche').set({ desistiu: true, de: meuIndex });
   setTimeout(() => voltarMenuOnline(), 200);
 }
 
@@ -1406,6 +1450,169 @@ if (localStorage.getItem('daltonico') === '1') {
 // ─────────────────────────────────────────────
 // LOADING SCREEN
 // ─────────────────────────────────────────────
+// ESTATÍSTICAS
+// ─────────────────────────────────────────────
+const STATS_KEY = 'gameStats';
+
+function getStats() {
+  const defOff = () => ({ p: 0, v: 0, t: [], s: [] });
+  const defOn  = () => ({ p: 0, v: 0, s: [] });
+  try {
+    const d = JSON.parse(localStorage.getItem(STATS_KEY));
+    if (!d || !d.offline || !d.online) throw 0;
+    ['4x4','4x5','6x6'].forEach(k => {
+      if (!d.offline[k]) d.offline[k] = defOff();
+      if (!d.online[k])  d.online[k]  = defOn();
+    });
+    return d;
+  } catch {
+    return {
+      offline: { '4x4': defOff(), '4x5': defOff(), '6x6': defOff() },
+      online:  { '4x4': defOn(),  '4x5': defOn(),  '6x6': defOn()  }
+    };
+  }
+}
+
+function registrarStatOffline(tamanho, ganhou, tentativas, tempo) {
+  const st = getStats();
+  const s  = st.offline[tamanho];
+  if (!s) return;
+  s.p++;
+  if (ganhou) s.v++;
+  s.t = [...s.t, tentativas].slice(-200);
+  s.s = [...s.s, tempo].slice(-200);
+  localStorage.setItem(STATS_KEY, JSON.stringify(st));
+}
+
+function registrarStatOnline(tamanho, ganhou, tempo) {
+  const st = getStats();
+  const s  = st.online[tamanho];
+  if (!s) return;
+  s.p++;
+  if (ganhou) s.v++;
+  s.s = [...s.s, tempo].slice(-200);
+  localStorage.setItem(STATS_KEY, JSON.stringify(st));
+}
+
+function statsAvg(arr) {
+  return arr && arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+}
+
+function statsFmtTempo(seg) {
+  if (seg === null || seg === undefined) return '—';
+  const m = Math.floor(seg / 60), s = seg % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function statsCardHtml(label, s, showTentativas) {
+  const txa  = s.p ? Math.round(s.v / s.p * 100) : 0;
+  const mTmp = statsAvg(s.s);
+  const minS = s.s.length ? Math.min(...s.s) : null;
+  const mTnt = showTentativas ? statsAvg(s.t) : null;
+  const minT = showTentativas && s.t.length ? Math.min(...s.t) : null;
+
+  return `<div class="stats-card">
+    <div class="stats-card-title">${label}</div>
+    <div class="stats-row"><span>Partidas</span><strong>${s.p}</strong></div>
+    <div class="stats-row"><span>Vitórias</span><strong>${s.v} <small>(${txa}%)</small></strong></div>
+    <div class="stats-row"><span>Derrotas</span><strong>${s.p - s.v}</strong></div>
+    ${mTmp !== null ? `
+    <div class="stats-divider"></div>
+    <div class="stats-row"><span>Tempo médio</span><strong>${statsFmtTempo(Math.round(mTmp))}</strong></div>
+    <div class="stats-row"><span>Melhor tempo</span><strong>${statsFmtTempo(minS)}</strong></div>` : ''}
+    ${mTnt !== null ? `
+    <div class="stats-divider"></div>
+    <div class="stats-row"><span>Tentativas (média)</span><strong>${mTnt.toFixed(1)}</strong></div>
+    <div class="stats-row"><span>Tentativas (mínimo)</span><strong>${minT}</strong></div>` : ''}
+  </div>`;
+}
+
+function mostrarEstatisticasOffline() {
+  const el = document.getElementById('tab-stats-offline');
+  if (!el) return;
+  const st     = getStats().offline;
+  const sizes  = ['4x4','4x5','6x6'];
+  const labels = { '4x4': '4 × 4', '4x5': '4 × 5', '6x6': '6 × 6' };
+  const totalP = sizes.reduce((a, k) => a + st[k].p, 0);
+  const totalV = sizes.reduce((a, k) => a + st[k].v, 0);
+  const taxa   = totalP ? Math.round(totalV / totalP * 100) : 0;
+
+  if (totalP === 0) {
+    el.innerHTML = '<p class="stats-empty">Nenhuma partida registrada ainda.<br>Jogue uma partida para ver suas estatísticas! 🎮</p>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="stats-summary">
+      <div class="stats-sum-item"><span class="stats-sum-val">${totalP}</span><span class="stats-sum-lbl">Partidas</span></div>
+      <div class="stats-sum-item"><span class="stats-sum-val">${totalV}</span><span class="stats-sum-lbl">Vitórias</span></div>
+      <div class="stats-sum-item"><span class="stats-sum-val">${taxa}%</span><span class="stats-sum-lbl">Taxa vitória</span></div>
+    </div>
+    <div class="stats-grid">
+      ${sizes.map(k => statsCardHtml(labels[k], st[k], true)).join('')}
+    </div>`;
+}
+
+function mostrarEstatisticasOnline() {
+  const el = document.getElementById('tab-stats-online');
+  if (!el) return;
+  const st     = getStats().online;
+  const sizes  = ['4x4','4x5','6x6'];
+  const labels = { '4x4': '4 × 4', '4x5': '4 × 5', '6x6': '6 × 6' };
+  const totalP = sizes.reduce((a, k) => a + st[k].p, 0);
+  const totalV = sizes.reduce((a, k) => a + st[k].v, 0);
+  const taxa   = totalP ? Math.round(totalV / totalP * 100) : 0;
+
+  if (totalP === 0) {
+    el.innerHTML = '<p class="stats-empty">Nenhuma partida online registrada ainda.<br>Jogue online para ver suas estatísticas! 🌐</p>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="stats-summary">
+      <div class="stats-sum-item"><span class="stats-sum-val">${totalP}</span><span class="stats-sum-lbl">Partidas</span></div>
+      <div class="stats-sum-item"><span class="stats-sum-val">${totalV}</span><span class="stats-sum-lbl">Vitórias</span></div>
+      <div class="stats-sum-item"><span class="stats-sum-val">${taxa}%</span><span class="stats-sum-lbl">Taxa vitória</span></div>
+    </div>
+    <div class="stats-grid">
+      ${sizes.map(k => statsCardHtml(labels[k], st[k], false)).join('')}
+    </div>`;
+}
+
+// ─────────────────────────────────────────────
+// NOME SALVO
+// ─────────────────────────────────────────────
+const NOME_KEY = 'savedPlayerName';
+
+function carregarNomeSalvo() {
+  const nome = localStorage.getItem(NOME_KEY) || '';
+  const ids  = ['human-name', 'online-name'];
+  ids.forEach(id => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    if (nome) input.value = nome;
+    atualizarBadgeNome(id, input.value.trim());
+    input.addEventListener('input', () => {
+      const v = input.value.trim();
+      if (v) localStorage.setItem(NOME_KEY, v);
+      // sincroniza o outro campo
+      const outroId = id === 'human-name' ? 'online-name' : 'human-name';
+      const outro   = document.getElementById(outroId);
+      if (outro) outro.value = input.value;
+      atualizarBadgeNome(id, v);
+      atualizarBadgeNome(outroId, v);
+    });
+  });
+}
+
+function atualizarBadgeNome(inputId, valor) {
+  const badgeId = inputId === 'human-name' ? 'badge-human' : 'badge-online';
+  const badge   = document.getElementById(badgeId);
+  if (!badge) return;
+  badge.classList.toggle('vis', !!valor);
+}
+
+// ─────────────────────────────────────────────
+// LOADING
+// ─────────────────────────────────────────────
 (function () {
   const MIN_MS = 2000;
   const start  = Date.now();
@@ -1414,6 +1621,7 @@ if (localStorage.getItem('daltonico') === '1') {
     if (!el) return;
     el.classList.add('hide');
     setTimeout(() => el.remove(), 650);
+    carregarNomeSalvo();
   }
   window.addEventListener('load', function () {
     const delay = Math.max(0, MIN_MS - (Date.now() - start));

@@ -903,7 +903,7 @@ function mostrarFimOnline(s0, s1, t0, t1) {
       return;
     }
 
-    if (rev.pedido && rev.de !== meuIndex && isWinner) {
+    if (rev.pedido && rev.de !== meuIndex) {
       let seg = 20;
       const nomePedinte = sanitize(G.players[rev.de].name);
       const mostrar = () => {

@@ -1266,10 +1266,25 @@ aplicarTema(localStorage.getItem('tema') || 'padrao');
   });
 
   // Mobile: giroscópio
-  window.addEventListener('deviceorientation', e => {
-    tx = (e.gamma || 0) * 10;
-    ty = ((e.beta  || 0) - 30) * 5;
-  }, { passive: true });
+  function ativarGiro() {
+    window.addEventListener('deviceorientation', e => {
+      tx = (e.gamma || 0) * 10;
+      ty = ((e.beta  || 0) - 30) * 5;
+    }, { passive: true });
+  }
+
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    // iOS 13+ exige permissão explícita — pede no primeiro toque
+    document.addEventListener('touchstart', () => {
+      DeviceOrientationEvent.requestPermission()
+        .then(r => { if (r === 'granted') ativarGiro(); })
+        .catch(() => {});
+    }, { once: true, passive: true });
+  } else {
+    // Android e demais — sem necessidade de permissão
+    ativarGiro();
+  }
 
   tick();
 }());

@@ -144,6 +144,8 @@ body {
   .back { font-size: 1rem; }
 }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -240,6 +242,21 @@ body {
 </div>
 
 <script>
+// ─────────────────────────────────────────────
+// FIREBASE
+// ─────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCvh-pNeesCaGE32LTLjpF7SypCbybx0Yw",
+  authDomain: "jogo-da-memoria-1ad1e.firebaseapp.com",
+  databaseURL: "https://jogo-da-memoria-1ad1e-default-rtdb.firebaseio.com",
+  projectId: "jogo-da-memoria-1ad1e",
+  storageBucket: "jogo-da-memoria-1ad1e.firebasestorage.app",
+  messagingSenderId: "616006526373",
+  appId: "1:616006526373:web:6210c90d46be1c8072744c"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 // ─────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────

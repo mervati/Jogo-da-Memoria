@@ -35,6 +35,36 @@ body {
   color: #444; letter-spacing: .5px;
 }
 .menu-credit span { color: #666; font-weight: 600; }
+.audio-widget {
+  position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+}
+.audio-icon {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+  cursor: pointer; font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s; margin-left: auto;
+}
+.audio-widget:hover .audio-icon { background: rgba(255,255,255,.22); }
+.audio-panel {
+  position: absolute; bottom: 52px; right: 0;
+  background: rgba(15,15,35,.96); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px; padding: 14px 18px 14px 16px;
+  width: 240px; display: flex; flex-direction: column; gap: 12px;
+  opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s;
+  overflow: hidden; box-sizing: border-box;
+}
+.audio-widget:hover .audio-panel { opacity: 1; visibility: visible; }
+.audio-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: .82rem; color: #aaa; width: 100%;
+}
+.audio-row span { min-width: 96px; white-space: nowrap; flex-shrink: 0; }
+.audio-row input[type=range] {
+  flex: 1; min-width: 0; accent-color: #e94560; cursor: pointer; height: 4px;
+}
+.ch-toggle { cursor: pointer; user-select: none; transition: filter .15s; }
+.ch-toggle:hover { filter: brightness(1.5); }
 
 /* ── BUTTONS ── */
 .btn {
@@ -302,6 +332,21 @@ body {
   </div>
 </div>
 
+<!-- ═══ AUDIO WIDGET (fixo em todas as telas) ═══ -->
+<div class="audio-widget">
+  <div class="audio-panel">
+    <div class="audio-row" id="row-musica">
+      <span><span class="ch-toggle" id="icon-musica" onclick="toggleMusica()" title="Ativar/Mutar música">🎵</span> Música</span>
+      <input type="range" id="vol-musica" min="0" max="100" value="30" oninput="setVolMusica(this.value)">
+    </div>
+    <div class="audio-row" id="row-som">
+      <span><span class="ch-toggle" id="icon-som" onclick="toggleSomJogo()" title="Ativar/Mutar sons">🔊</span> Som do Jogo</span>
+      <input type="range" id="vol-som" min="0" max="100" value="50" oninput="setVolSom(this.value)">
+    </div>
+  </div>
+  <div class="audio-icon" onclick="toggleMute()">🔊</div>
+</div>
+
 <script>
 // ─────────────────────────────────────────────
 // FIREBASE
@@ -351,8 +396,10 @@ let G = {};
 // SETUP HELPERS
 // ─────────────────────────────────────────────
 function showScreen(id) {
+  initAudio();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  playMusic();
 }
 
 function pick(el) {
@@ -474,6 +521,7 @@ function syncBoard() {
     } else if (!card.matched) {
       const deveVirar = !!card.flipped;
       if (deveVirar && !el.classList.contains('flipped')) {
+        playSomFlip();
         setTimeout(() => el.classList.add('flipped'), 50);
         el.style.pointerEvents = 'none';
       } else if (!deveVirar && el.classList.contains('flipped')) {
@@ -538,6 +586,7 @@ function onCardClick(i) {
 }
 
 function revealCard(i) {
+  playSomFlip();
   G.cards[i].flipped = true;
   const el = document.getElementById(`c${i}`);
   if (el) el.classList.add('flipped');
@@ -557,6 +606,7 @@ function checkMatch() {
   G.aiMem[b] = G.cards[b].emoji;
 
   if (hit) {
+    playSomMatch();
     G.cards[a].matched = G.cards[b].matched = true;
     document.getElementById(`c${a}`).classList.add('matched');
     document.getElementById(`c${b}`).classList.add('matched');
@@ -810,7 +860,8 @@ function iniciarOnline(codigo) {
       const e = snap.val();
       if (!e || !e.cards) return;
 
-      const primeiraVez = G.cards.length === 0;
+      const primeiraVez   = G.cards.length === 0;
+      const prevDonePairs = G.donePairs || 0;
 
       G.cards     = e.cards;
       G.cur       = e.cur;
@@ -824,6 +875,7 @@ function iniciarOnline(codigo) {
       } else {
         syncBoard();
       }
+      if (!primeiraVez && G.donePairs > prevDonePairs) playSomMatch();
       refreshScores();
       setTurnBar();
       iniciarTimer(e.turnStartTime || Date.now());
@@ -990,6 +1042,156 @@ function checkMatchOnline() {
 }
 
 // ─────────────────────────────────────────────
+// AUDIO
+// ─────────────────────────────────────────────
+let audioCtx    = null;
+let musicGain   = null;
+let somGain     = null;
+let musicPlaying = false;
+let melodyIdx   = 0;
+let melodyTimer = null;
+let muteMus     = false;
+let muteSom     = false;
+const MELODY    = [523.25, 659.25, 783.99, 659.25, 523.25, 440.00, 392.00, 440.00];
+const NOTE_DUR  = 0.38;
+
+function initAudio() {
+  if (audioCtx) { audioCtx.resume(); return; }
+  audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+  musicGain = audioCtx.createGain();
+  somGain   = audioCtx.createGain();
+  musicGain.gain.value = document.getElementById('vol-musica') ? document.getElementById('vol-musica').value / 100 : 0.30;
+  somGain.gain.value   = document.getElementById('vol-som')    ? document.getElementById('vol-som').value    / 100 : 0.50;
+  musicGain.connect(audioCtx.destination);
+  somGain.connect(audioCtx.destination);
+}
+
+function playMusic() {
+  if (!audioCtx || musicPlaying) return;
+  musicPlaying = true;
+  melodyIdx = 0;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(scheduleNote);
+  } else {
+    scheduleNote();
+  }
+}
+
+function scheduleNote() {
+  if (!musicPlaying || !audioCtx) return;
+  const freq = MELODY[melodyIdx % MELODY.length];
+  const t    = audioCtx.currentTime;
+  const osc  = audioCtx.createOscillator();
+  const env  = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = freq;
+  env.gain.setValueAtTime(0, t);
+  env.gain.linearRampToValueAtTime(0.6, t + 0.04);
+  env.gain.exponentialRampToValueAtTime(0.001, t + NOTE_DUR - 0.04);
+  osc.connect(env);
+  env.connect(musicGain);
+  osc.start(t);
+  osc.stop(t + NOTE_DUR);
+  melodyIdx++;
+  melodyTimer = setTimeout(scheduleNote, NOTE_DUR * 1000);
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  clearTimeout(melodyTimer);
+}
+
+function playSomFlip() {
+  if (!audioCtx) return;
+  const t   = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const env = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(600, t);
+  osc.frequency.exponentialRampToValueAtTime(300, t + 0.10);
+  env.gain.setValueAtTime(0.4, t);
+  env.gain.exponentialRampToValueAtTime(0.001, t + 0.10);
+  osc.connect(env);
+  env.connect(somGain);
+  osc.start(t);
+  osc.stop(t + 0.10);
+}
+
+function playSomMatch() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  [523.25, 659.25, 783.99].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const env = audioCtx.createGain();
+    const s   = t + i * 0.13;
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    env.gain.setValueAtTime(0, s);
+    env.gain.linearRampToValueAtTime(0.5, s + 0.04);
+    env.gain.exponentialRampToValueAtTime(0.001, s + 0.22);
+    osc.connect(env);
+    env.connect(somGain);
+    osc.start(s);
+    osc.stop(s + 0.22);
+  });
+}
+
+function setVolMusica(v) {
+  muteMus = (v == 0);
+  if (musicGain) musicGain.gain.value = v / 100;
+  atualizarIconeMute();
+}
+
+function setVolSom(v) {
+  muteSom = (v == 0);
+  if (somGain) somGain.gain.value = v / 100;
+  atualizarIconeMute();
+}
+
+function atualizarIconeMute() {
+  const iconGeral = document.querySelector('.audio-icon');
+  if (iconGeral) iconGeral.textContent = (muteMus && muteSom) ? '🔇' : '🔊';
+
+  const iconMus = document.getElementById('icon-musica');
+  const iconSom = document.getElementById('icon-som');
+  const rowMus  = document.getElementById('row-musica');
+  const rowSom  = document.getElementById('row-som');
+
+  if (iconMus) iconMus.textContent = muteMus ? '🔕' : '🎵';
+  if (iconSom) iconSom.textContent = muteSom ? '🔇' : '🔊';
+  if (rowMus)  rowMus.style.opacity = muteMus ? '0.4' : '1';
+  if (rowSom)  rowSom.style.opacity = muteSom ? '0.4' : '1';
+}
+
+function toggleMusica() {
+  initAudio();
+  muteMus = !muteMus;
+  const vm = document.getElementById('vol-musica');
+  if (musicGain) musicGain.gain.value = muteMus ? 0 : (vm ? vm.value / 100 : 0.3);
+  atualizarIconeMute();
+}
+
+function toggleSomJogo() {
+  initAudio();
+  muteSom = !muteSom;
+  const vs = document.getElementById('vol-som');
+  if (somGain) somGain.gain.value = muteSom ? 0 : (vs ? vs.value / 100 : 0.5);
+  atualizarIconeMute();
+}
+
+function toggleMute() {
+  initAudio();
+  const algumAtivo = !muteMus || !muteSom;
+  muteMus = algumAtivo;
+  muteSom = algumAtivo;
+  const vm = document.getElementById('vol-musica');
+  const vs = document.getElementById('vol-som');
+  if (musicGain) musicGain.gain.value = muteMus ? 0 : (vm ? vm.value / 100 : 0.3);
+  if (somGain)   somGain.gain.value   = muteSom ? 0 : (vs ? vs.value / 100 : 0.5);
+  atualizarIconeMute();
+}
+
+// ─────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────
 function sanitize(str) {
@@ -1007,6 +1209,12 @@ function shuffle(arr) {
 function rand(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
+
+// Inicia áudio no primeiro toque/clique na tela inicial
+document.getElementById('screen-menu').addEventListener('pointerdown', function() {
+  initAudio();
+  playMusic();
+}, { once: true });
 </script>
 </body>
 </html>

@@ -618,7 +618,12 @@ function endGame() {
 }
 
 function askMenu() {
-  if (confirm('Sair da partida atual?')) showScreen('screen-menu');
+  if (confirm('Sair da partida atual?')) {
+    if (G.online && salaRef) {
+      salaRef.child('jogadores/' + G.meuIndex + '/online').set(false);
+    }
+    showScreen('screen-menu');
+  }
 }
 
 // ─────────────────────────────────────────────

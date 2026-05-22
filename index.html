@@ -5,11 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jogo da Memória</title>
 <style>
+:root {
+  --bg: #1a1a2e;
+  --accent: #e94560;
+  --accent-dark: #c62a47;
+  --accent-rgb: 233,69,96;
+  --accent2: #4fc3f7;
+  --card-back1: #16213e;
+  --card-back2: #0f3460;
+  --card-matched: #e8f5e9;
+  --btn-txt: #fff;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #1a1a2e;
+  background: var(--bg);
   color: #eee;
   min-height: 100vh;
   display: flex;
@@ -25,11 +36,26 @@ body {
 .menu-emoji { font-size: 4rem; margin-bottom: 10px; }
 .menu-title {
   font-size: 2.8rem; font-weight: 800; text-align: center;
-  background: linear-gradient(135deg, #e94560, #4fc3f7);
+  background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent));
+  background-size: 200% auto;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   margin-bottom: 8px;
+  animation: titleFade 1.4s cubic-bezier(.4, 0, .2, 1) forwards;
 }
 .menu-sub { color: #777; margin-bottom: 40px; font-size: 1rem; }
+
+@keyframes titleFade {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+    background-position: 0% 50%;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    background-position: 100% 50%;
+  }
+}
 .menu-credit {
   margin-top: 32px; font-size: .78rem;
   color: #444; letter-spacing: .5px;
@@ -61,10 +87,40 @@ body {
 }
 .audio-row span { min-width: 96px; white-space: nowrap; flex-shrink: 0; }
 .audio-row input[type=range] {
-  flex: 1; min-width: 0; accent-color: #e94560; cursor: pointer; height: 4px;
+  flex: 1; min-width: 0; accent-color: var(--accent); cursor: pointer; height: 4px;
 }
 .ch-toggle { cursor: pointer; user-select: none; transition: filter .15s; }
 .ch-toggle:hover { filter: brightness(1.5); }
+
+/* ── TEMAS ── */
+.theme-widget {
+  position: fixed; bottom: 24px; right: 80px; z-index: 1000;
+}
+.theme-icon {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+  cursor: pointer; font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s; margin-left: auto;
+}
+.theme-widget:hover .theme-icon { background: rgba(255,255,255,.22); }
+.theme-panel {
+  position: absolute; bottom: 52px; right: 0;
+  background: rgba(15,15,35,.96); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px; align-items: center;
+  opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s;
+  white-space: nowrap;
+}
+.theme-widget:hover .theme-panel { opacity: 1; visibility: visible; }
+.theme-panel-label { font-size: .75rem; color: #666; text-transform: uppercase; letter-spacing: .8px; }
+.theme-opts { display: flex; gap: 10px; }
+.theme-dot {
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; transition: transform .2s, border-color .2s; outline: none;
+}
+.theme-dot:hover { transform: scale(1.18); }
+.theme-dot.ativo { border-color: #fff; transform: scale(1.12); box-shadow: 0 0 8px rgba(255,255,255,.4); }
 
 /* ── BUTTONS ── */
 .btn {
@@ -72,10 +128,10 @@ body {
   font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #e94560, #c62a47); color: #fff;
-  box-shadow: 0 4px 20px rgba(233,69,96,.4);
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: var(--btn-txt);
+  box-shadow: 0 4px 20px rgba(var(--accent-rgb),.4);
 }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(233,69,96,.55); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(var(--accent-rgb),.55); }
 .btn-secondary {
   background: rgba(255,255,255,.08); color: #ddd;
   border: 1px solid rgba(255,255,255,.18);
@@ -97,7 +153,7 @@ body {
   cursor: pointer; font-size: .92rem; transition: all .2s; user-select: none;
 }
 .opt:hover { border-color: rgba(255,255,255,.35); color: #fff; }
-.opt.sel { border-color: #e94560; background: rgba(233,69,96,.18); color: #fff; }
+.opt.sel { border-color: var(--accent); background: rgba(var(--accent-rgb),.18); color: #fff; }
 .player-inputs { display: flex; flex-direction: column; gap: 8px; }
 .p-input {
   padding: 10px 16px; border-radius: 10px;
@@ -105,7 +161,7 @@ body {
   background: rgba(255,255,255,.05); color: #eee;
   font-size: .93rem; outline: none; transition: border-color .2s;
 }
-.p-input:focus { border-color: #4fc3f7; }
+.p-input:focus { border-color: var(--accent2); }
 .p-input::placeholder { color: #444; }
 .setup-actions { display: flex; gap: 12px; margin-top: 8px; }
 
@@ -150,12 +206,12 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 .back {
-  background: linear-gradient(135deg, #16213e, #0f3460);
+  background: linear-gradient(135deg, var(--card-back1), var(--card-back2));
   border: 2px solid rgba(255,255,255,.09);
   font-size: 1.4rem; color: rgba(255,255,255,.1);
 }
 .front { background: #fff; transform: rotateY(180deg); font-size: 2rem; }
-.card.matched .front { background: #e8f5e9; }
+.card.matched .front { background: var(--card-matched); }
 .card:not(.flipped):not(.matched):hover .card-inner { transform: rotateY(12deg); }
 
 .game-menu-btn { margin-top: 4px; }
@@ -330,6 +386,22 @@ body {
     <button class="btn btn-secondary" onclick="showScreen('screen-menu')">Menu</button>
     <button class="btn btn-primary"   onclick="startGame()">Jogar Novamente</button>
   </div>
+</div>
+
+<!-- ═══ TEMA WIDGET (fixo em todas as telas) ═══ -->
+<div class="theme-widget">
+  <div class="theme-panel">
+    <span class="theme-panel-label">Tema</span>
+    <div class="theme-opts">
+      <button class="theme-dot ativo" data-tema="padrao" onclick="aplicarTema('padrao')" title="Padrão"
+        style="background:linear-gradient(135deg,#1a1a2e 50%,#e94560 100%)"></button>
+      <button class="theme-dot" data-tema="preto" onclick="aplicarTema('preto')" title="Preto"
+        style="background:linear-gradient(135deg,#000 50%,#e0e0e0 100%)"></button>
+      <button class="theme-dot" data-tema="vermelho" onclick="aplicarTema('vermelho')" title="Vermelho"
+        style="background:linear-gradient(135deg,#0d0000 50%,#dd0000 100%)"></button>
+    </div>
+  </div>
+  <div class="theme-icon">🎨</div>
 </div>
 
 <!-- ═══ AUDIO WIDGET (fixo em todas as telas) ═══ -->
@@ -1215,6 +1287,44 @@ document.getElementById('screen-menu').addEventListener('pointerdown', function(
   initAudio();
   playMusic();
 }, { once: true });
+
+// ─────────────────────────────────────────────
+// TEMAS
+// ─────────────────────────────────────────────
+const THEMES = {
+  padrao: {
+    '--bg': '#1a1a2e', '--accent': '#e94560', '--accent-dark': '#c62a47',
+    '--accent-rgb': '233,69,96', '--accent2': '#4fc3f7',
+    '--card-back1': '#16213e', '--card-back2': '#0f3460',
+    '--card-matched': '#e8f5e9', '--btn-txt': '#fff'
+  },
+  preto: {
+    '--bg': '#000000', '--accent': '#d4d4d4', '--accent-dark': '#aaaaaa',
+    '--accent-rgb': '212,212,212', '--accent2': '#888888',
+    '--card-back1': '#1a1a1a', '--card-back2': '#0a0a0a',
+    '--card-matched': '#eeeeee', '--btn-txt': '#111'
+  },
+  vermelho: {
+    '--bg': '#0d0000', '--accent': '#dd0000', '--accent-dark': '#aa0000',
+    '--accent-rgb': '221,0,0', '--accent2': '#ff5533',
+    '--card-back1': '#1a0505', '--card-back2': '#0a0000',
+    '--card-matched': '#ffe0e0', '--btn-txt': '#fff'
+  }
+};
+
+function aplicarTema(nome) {
+  const tema = THEMES[nome];
+  if (!tema) return;
+  const root = document.documentElement;
+  Object.entries(tema).forEach(([k, v]) => root.style.setProperty(k, v));
+  document.querySelectorAll('.theme-dot').forEach(el => {
+    el.classList.toggle('ativo', el.dataset.tema === nome);
+  });
+  localStorage.setItem('tema', nome);
+}
+
+// Carrega tema salvo ou padrão
+aplicarTema(localStorage.getItem('tema') || 'padrao');
 </script>
 </body>
 </html>

@@ -24,6 +24,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  overflow-x: hidden;
 }
 
 .screen { display: none; width: 100%; max-width: 960px; }
@@ -141,7 +142,7 @@ body {
 }
 .menu-glass .btn { width: 100%; }
 .glass-card {
-  width: min(680px, 95vw);
+  width: min(680px, 100%);
   padding: 40px 48px 38px;
   overflow: hidden;
 }
@@ -565,6 +566,8 @@ body {
   .menu-title { font-size: 2rem; }
   .front { font-size: 1.5rem; }
   .back { font-size: 1rem; }
-  .glass-card { padding: 28px 20px 24px; }
+  .glass-card { padding: 28px 16px 24px; }
   .menu-glass { padding: 36px 24px 30px; }
+  .screen-tabs { gap: 2px; padding: 3px; }
+  .screen-tab { font-size: .78rem; padding: 8px 6px; }
 }

@@ -688,6 +688,7 @@ let salaRef = null;
 let meuIndex = 0;
 let timerInterval = null;
 let timerSegundos = 120;
+let gameEnded = false;
 
 function iniciarTimer(turnStartTime) {
   clearInterval(timerInterval);
@@ -777,6 +778,7 @@ function iniciarOnline(codigo) {
       salaRef.child('estado').set({ cards, cur: 0, flipped: [], donePairs: 0, players: [{ score: 0 }, { score: 0 }], turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
 
+    gameEnded = false;
     showScreen('screen-game');
     renderScores();
 
@@ -826,7 +828,10 @@ function iniciarOnline(codigo) {
       iniciarTimer(e.turnStartTime || Date.now());
 
       if (G.flipped.length === 2 && G.cur === meuIndex) setTimeout(checkMatchOnline, 950);
-      if (G.donePairs === G.totalPairs) setTimeout(G.online ? endGameOnline : endGame, 600);
+      if (G.donePairs === G.totalPairs && !gameEnded) {
+        gameEnded = true;
+        setTimeout(G.online ? endGameOnline : endGame, 600);
+      }
     });
   });
 }
@@ -936,6 +941,7 @@ function recusarRevanche() {
 }
 
 function iniciarRevanche() {
+  gameEnded = false;
   G.cards = [];
   G.flipped = [];
   G.cur = 0;

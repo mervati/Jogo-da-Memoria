@@ -569,5 +569,8 @@ body {
   .glass-card { padding: 28px 16px 24px; }
   .menu-glass { padding: 36px 24px 30px; }
   .screen-tabs { gap: 2px; padding: 3px; }
-  .screen-tab { font-size: .78rem; padding: 8px 6px; }
+  .screen-tab { font-size: .78rem; padding: 8px 6px; white-space: normal; text-align: center; }
+  .records-table th, .records-table td { padding: 6px 5px; font-size: .8rem; }
+  .records-table th:nth-child(3), .records-table td:nth-child(3),
+  .records-table th:nth-child(6), .records-table td:nth-child(6) { display: none; }
 }

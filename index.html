@@ -168,6 +168,15 @@ body {
     <input class="p-input" id="online-name" type="text" placeholder="Digite seu nome" maxlength="20">
   </div>
 
+  <div class="setup-section">
+    <div class="setup-label">Tamanho do Tabuleiro</div>
+    <div class="option-group">
+      <div class="opt sel" data-g="osize" data-v="4x4" onclick="pick(this)">4 × 4 &nbsp;(8 pares)</div>
+      <div class="opt"     data-g="osize" data-v="4x5" onclick="pick(this)">4 × 5 &nbsp;(10 pares)</div>
+      <div class="opt"     data-g="osize" data-v="6x6" onclick="pick(this)">6 × 6 &nbsp;(18 pares)</div>
+    </div>
+  </div>
+
   <div class="setup-actions" style="flex-direction:column; align-items:center; gap:14px;">
     <button class="btn btn-primary" onclick="criarSala()">➕ Criar Sala</button>
 
@@ -303,7 +312,7 @@ const SIZES = {
 // ─────────────────────────────────────────────
 // CONFIG STATE (setup screen values)
 // ─────────────────────────────────────────────
-const cfg = { mode:'ai', diff:'easy', np:2, size:'4x4' };
+const cfg = { mode:'ai', diff:'easy', np:2, size:'4x4', osize:'4x4' };
 
 // ─────────────────────────────────────────────
 // GAME STATE
@@ -623,7 +632,7 @@ function criarSala() {
   const codigo = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   salaRef = db.ref('salas/' + codigo);
-  salaRef.set({ jogadores: { 0: { nome, score: 0 } }, status: 'aguardando' });
+  salaRef.set({ jogadores: { 0: { nome, score: 0 } }, status: 'aguardando', tamanho: cfg.osize });
 
   meuIndex = 0;
   document.getElementById('online-status').innerHTML =
@@ -659,7 +668,7 @@ function iniciarOnline(codigo) {
 
     G = {
       cards: [], flipped: [], cur: 0, busy: false, aiMem: {},
-      totalPairs: SIZES['4x4'].pairs, donePairs: 0, cols: SIZES['4x4'].cols,
+      totalPairs: SIZES[sala.tamanho || '4x4'].pairs, donePairs: 0, cols: SIZES[sala.tamanho || '4x4'].cols,
       online: true, meuIndex,
       players: [
         { name: jogadores[0].nome, score: 0, isAI: false, color: COLORS[0], rgb: COLORS_RGB[0] },

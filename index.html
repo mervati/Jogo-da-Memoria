@@ -17,6 +17,8 @@
   --btn-txt: #fff;
   --txt-muted: #eee;
   --txt-dim: #aaa;
+  --title-c1: #e94560;
+  --title-c2: #4fc3f7;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -78,11 +80,77 @@ body {
   40%           { transform: scale(1.25); opacity: 1; }
 }
 
+/* ── MENU PARALLAX ── */
+.menu-parallax {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0; overflow: hidden;
+}
+.p-layer { position: absolute; inset: 0; will-change: transform; }
+.p-orb   { position: absolute; border-radius: 50%; filter: blur(82px); }
+.orb-a {
+  width: 560px; height: 560px; background: var(--accent); opacity: .14;
+  top: -140px; right: -110px;
+  animation: orbBreath 10s ease-in-out infinite alternate;
+}
+.orb-b {
+  width: 460px; height: 460px; background: var(--accent2); opacity: .1;
+  bottom: -120px; left: -90px;
+  animation: orbBreath 13s ease-in-out infinite alternate-reverse;
+}
+.orb-c {
+  width: 300px; height: 300px; background: var(--accent); opacity: .07;
+  top: 38%; left: 42%;
+  animation: orbBreath 8s ease-in-out 2s infinite alternate;
+}
+@keyframes orbBreath {
+  from { transform: scale(1)    translate(0,0); }
+  to   { transform: scale(1.25) translate(14px,-14px); }
+}
+.p-card {
+  position: absolute; user-select: none; pointer-events: none;
+  animation: pcardFloat var(--dur,8s) var(--del,0s) ease-in-out infinite alternate;
+}
+@keyframes pcardFloat {
+  from { opacity: .1;  transform: translateY(0)    rotate(var(--r0,-8deg)) scale(1);    }
+  to   { opacity: .19; transform: translateY(-18px) rotate(var(--r1, 8deg)) scale(1.1); }
+}
+.p-dot {
+  position: absolute; border-radius: 50%; background: var(--accent);
+  animation: pdotFloat var(--dur,6s) var(--del,0s) ease-in-out infinite alternate;
+}
+@keyframes pdotFloat {
+  from {
+    opacity: .75;
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 8px 3px rgba(var(--accent-rgb),.6), 0 0 20px 6px rgba(var(--accent-rgb),.25);
+  }
+  to {
+    opacity: .2;
+    transform: translateY(-18px) scale(.7);
+    box-shadow: 0 0 4px 1px rgba(var(--accent-rgb),.2), 0 0 10px 2px rgba(var(--accent-rgb),.08);
+  }
+}
+/* Glass card */
+.menu-glass {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  width: min(400px, 92vw);
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 28px;
+  padding: 44px 44px 38px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 48px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.07);
+}
+.menu-glass .btn { width: 100%; }
+
 /* ── MENU ── */
 .menu-emoji { font-size: 4rem; margin-bottom: 10px; }
 .menu-title {
-  font-size: 2.8rem; font-weight: 800; text-align: center;
-  background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent));
+  font-size: clamp(1.4rem, 6.5vw, 2.8rem); font-weight: 800; text-align: center;
+  white-space: nowrap;
+  background: linear-gradient(135deg, var(--title-c1), var(--title-c2), var(--title-c1));
   background-size: 200% auto;
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   margin-bottom: 8px;
@@ -413,13 +481,47 @@ body {
 
 <!-- ═══ MENU ═══ -->
 <div id="screen-menu" class="screen active">
-  <div class="menu-emoji">🃏</div>
-  <h1 class="menu-title">Jogo da Memória</h1>
-  <p class="menu-sub">Encontre todos os pares e derrote seus adversários!</p>
-  <button class="btn btn-primary" onclick="showScreen('screen-setup')">Jogar</button>
-  <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-online')">🌐 Jogar Online</button>
-  <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-records')">🏅 Recordes</button>
-  <p class="menu-credit">Desenvolvido por <span>Mariana Ervati</span></p>
+
+  <!-- ── Parallax bg ── -->
+  <div class="menu-parallax" id="menu-parallax">
+    <div class="p-layer" id="pl-1">
+      <div class="p-orb orb-a"></div>
+      <div class="p-orb orb-b"></div>
+      <div class="p-orb orb-c"></div>
+    </div>
+    <div class="p-layer" id="pl-2">
+      <span class="p-card" style="font-size:2.2rem;top:11%;left:6%;--r0:-12deg;--r1:8deg;--dur:7s">🦊</span>
+      <span class="p-card" style="font-size:1.9rem;top:20%;right:8%;--r0:10deg;--r1:-6deg;--dur:9s;--del:.8s">🐬</span>
+      <span class="p-card" style="font-size:2.4rem;bottom:24%;left:5%;--r0:-6deg;--r1:14deg;--dur:8s;--del:1.4s">🌸</span>
+      <span class="p-card" style="font-size:2rem;bottom:17%;right:7%;--r0:8deg;--r1:-10deg;--dur:6.5s;--del:.4s">⭐</span>
+      <span class="p-card" style="font-size:1.7rem;top:54%;left:3%;--r0:-14deg;--r1:6deg;--dur:10s;--del:2s">🎯</span>
+      <span class="p-card" style="font-size:2rem;top:7%;right:22%;--r0:6deg;--r1:-12deg;--dur:7.5s;--del:1s">🔮</span>
+      <span class="p-card" style="font-size:1.8rem;bottom:9%;left:21%;--r0:-8deg;--r1:10deg;--dur:9.5s;--del:.6s">🎭</span>
+      <span class="p-card" style="font-size:1.6rem;top:39%;right:5%;--r0:12deg;--r1:-8deg;--dur:8.5s;--del:1.8s">🎪</span>
+    </div>
+    <div class="p-layer" id="pl-3">
+      <div class="p-dot" style="width:12px;height:12px;top:30%;left:16%;--dur:5s"></div>
+      <div class="p-dot" style="width:8px;height:8px;top:61%;left:26%;--dur:7s;--del:1s"></div>
+      <div class="p-dot" style="width:16px;height:16px;top:19%;right:31%;--dur:6s;--del:.5s"></div>
+      <div class="p-dot" style="width:10px;height:10px;bottom:34%;right:21%;--dur:8s;--del:2s"></div>
+      <div class="p-dot" style="width:12px;height:12px;top:74%;right:36%;--dur:5.5s;--del:1.5s"></div>
+      <div class="p-dot" style="width:8px;height:8px;top:44%;left:41%;--dur:9s;--del:.8s"></div>
+      <div class="p-dot" style="width:14px;height:14px;bottom:19%;left:39%;--dur:6.5s;--del:2.5s"></div>
+      <div class="p-dot" style="width:10px;height:10px;top:14%;left:56%;--dur:7.5s;--del:1.2s"></div>
+    </div>
+  </div>
+
+  <!-- ── Conteúdo ── -->
+  <div class="menu-glass">
+    <div class="menu-emoji">🃏</div>
+    <h1 class="menu-title">Jogo da Memória</h1>
+    <p class="menu-sub">Encontre todos os pares e derrote seus adversários!</p>
+    <button class="btn btn-primary"   onclick="showScreen('screen-setup')">Jogar</button>
+    <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-online')">🌐 Jogar Online</button>
+    <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-records')">🏅 Recordes</button>
+    <p class="menu-credit">Desenvolvido por <span>Mariana Ervati</span></p>
+  </div>
+
 </div>
 
 <!-- ═══ ONLINE ═══ -->
@@ -1793,21 +1895,24 @@ const THEMES = {
     '--accent-rgb': '233,69,96', '--accent2': '#4fc3f7',
     '--card-back1': '#16213e', '--card-back2': '#0f3460',
     '--card-matched': '#e8f5e9', '--btn-txt': '#fff',
-    '--txt-muted': '#eee', '--txt-dim': '#aaa'
+    '--txt-muted': '#eee', '--txt-dim': '#aaa',
+    '--title-c1': '#e94560', '--title-c2': '#4fc3f7'
   },
   preto: {
     '--bg': '#000000', '--accent': '#d4d4d4', '--accent-dark': '#aaaaaa',
     '--accent-rgb': '212,212,212', '--accent2': '#888888',
     '--card-back1': '#1a1a1a', '--card-back2': '#0a0a0a',
     '--card-matched': '#eeeeee', '--btn-txt': '#111',
-    '--txt-muted': '#bbb', '--txt-dim': '#777'
+    '--txt-muted': '#bbb', '--txt-dim': '#777',
+    '--title-c1': '#ffffff', '--title-c2': '#66aaff'
   },
   vermelho: {
     '--bg': '#0d0000', '--accent': '#dd0000', '--accent-dark': '#aa0000',
     '--accent-rgb': '221,0,0', '--accent2': '#ff5533',
     '--card-back1': '#1a0505', '--card-back2': '#0a0000',
     '--card-matched': '#ffe0e0', '--btn-txt': '#fff',
-    '--txt-muted': '#eee', '--txt-dim': '#aaa'
+    '--txt-muted': '#eee', '--txt-dim': '#aaa',
+    '--title-c1': '#ff3333', '--title-c2': '#ffaa00'
   }
 };
 
@@ -1838,6 +1943,41 @@ function aplicarTema(nome) {
 
 // Carrega tema salvo ou padrão
 aplicarTema(localStorage.getItem('tema') || 'padrao');
+
+// ─────────────────────────────────────────────
+// PARALLAX MENU
+// ─────────────────────────────────────────────
+(function () {
+  const layers = [
+    { id: 'pl-1', f: 0.012 },
+    { id: 'pl-2', f: 0.032 },
+    { id: 'pl-3', f: 0.058 },
+  ];
+  let tx = 0, ty = 0, cx = 0, cy = 0;
+
+  function tick() {
+    cx += (tx - cx) * 0.07;
+    cy += (ty - cy) * 0.07;
+    layers.forEach(({ id, f }) => {
+      const el = document.getElementById(id);
+      if (el) el.style.transform = `translate3d(${cx * f}px,${cy * f}px,0)`;
+    });
+    requestAnimationFrame(tick);
+  }
+
+  document.addEventListener('mousemove', e => {
+    tx = e.clientX - window.innerWidth  / 2;
+    ty = e.clientY - window.innerHeight / 2;
+  });
+
+  // Mobile: giroscópio
+  window.addEventListener('deviceorientation', e => {
+    tx = (e.gamma || 0) * 10;
+    ty = ((e.beta  || 0) - 30) * 5;
+  }, { passive: true });
+
+  tick();
+}());
 
 // Restaura modo daltônico
 if (localStorage.getItem('daltonico') === '1') {

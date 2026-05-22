@@ -1128,7 +1128,10 @@ const MELODY    = [523.25, 659.25, 783.99, 659.25, 523.25, 440.00, 392.00, 440.0
 const NOTE_DUR  = 0.38;
 
 function initAudio() {
-  if (audioCtx) { audioCtx.resume(); return; }
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return;
+  }
   audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
   musicGain = audioCtx.createGain();
   somGain   = audioCtx.createGain();
@@ -1136,6 +1139,8 @@ function initAudio() {
   somGain.gain.value   = document.getElementById('vol-som')    ? document.getElementById('vol-som').value    / 100 : 0.50;
   musicGain.connect(audioCtx.destination);
   somGain.connect(audioCtx.destination);
+  // desbloqueia em iOS que cria o contexto já suspenso
+  audioCtx.resume();
 }
 
 function playMusic() {
@@ -1175,6 +1180,7 @@ function stopMusic() {
 
 function playSomFlip() {
   if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') { audioCtx.resume(); return; }
   const t   = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const env = audioCtx.createGain();
@@ -1191,6 +1197,7 @@ function playSomFlip() {
 
 function playSomMatch() {
   if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') { audioCtx.resume(); return; }
   const t = audioCtx.currentTime;
   [523.25, 659.25, 783.99].forEach((freq, i) => {
     const osc = audioCtx.createOscillator();
@@ -1287,6 +1294,11 @@ document.getElementById('screen-menu').addEventListener('pointerdown', function(
   initAudio();
   playMusic();
 }, { once: true });
+
+// iOS exige desbloqueio do AudioContext em qualquer toque subsequente
+document.addEventListener('touchstart', function() {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: true });
 
 // ─────────────────────────────────────────────
 // TEMAS

@@ -446,7 +446,8 @@ function renderScores() {
     el.className = 'pscore' + (i === G.cur ? ' active' : '');
     el.id = `ps${i}`;
     el.style.cssText = `--pc:${p.color};--pc-rgb:${p.rgb}`;
-    el.innerHTML = `<div class="pn">${p.isAI ? '🤖' : '👤'} ${p.name}</div><div class="pp">${p.score}</div>`;
+    const suaVezVisivel = G.online && i === G.meuIndex && i === G.cur;
+    el.innerHTML = `<div class="sua-vez" style="font-size:.7rem;color:#4fc3f7;font-weight:700;margin-bottom:2px;display:${suaVezVisivel ? '' : 'none'}">▶ SUA VEZ</div><div class="pn">${p.isAI ? '🤖' : '👤'} ${p.name}</div><div class="pp">${p.score}</div>`;
     panel.appendChild(el);
   });
 }
@@ -457,6 +458,10 @@ function refreshScores() {
     if (!el) return;
     el.className = 'pscore' + (i === G.cur ? ' active' : '');
     el.querySelector('.pp').textContent = p.score;
+    const aviso = el.querySelector('.sua-vez');
+    if (aviso) {
+      aviso.style.display = (G.online && i === G.meuIndex && i === G.cur) ? '' : 'none';
+    }
   });
 }
 
@@ -639,21 +644,27 @@ let meuIndex = 0;
 let timerInterval = null;
 let timerSegundos = 120;
 
-function iniciarTimer() {
+function iniciarTimer(turnStartTime) {
   clearInterval(timerInterval);
-  timerSegundos = 120;
-  atualizarTimerDisplay();
-  if (!G.online || G.cur !== G.meuIndex) return;
-  timerInterval = setInterval(() => {
-    timerSegundos--;
+  const DURACAO = 120;
+
+  function tick() {
+    timerSegundos = Math.max(0, DURACAO - Math.floor((Date.now() - turnStartTime) / 1000));
     atualizarTimerDisplay();
     if (timerSegundos <= 0) {
       clearInterval(timerInterval);
       if (G.online && G.cur === G.meuIndex && !G.busy) {
-        salaRef.child('estado').update({ cur: (G.cur + 1) % 2, flipped: [] });
+        salaRef.child('estado').update({
+          cur: (G.cur + 1) % 2,
+          flipped: [],
+          turnStartTime: firebase.database.ServerValue.TIMESTAMP
+        });
       }
     }
-  }, 1000);
+  }
+
+  tick();
+  timerInterval = setInterval(tick, 1000);
 }
 
 function atualizarTimerDisplay() {
@@ -718,7 +729,7 @@ function iniciarOnline(codigo) {
     if (meuIndex === 0) {
       const picked = shuffle([...EMOJIS]).slice(0, G.totalPairs);
       const cards  = shuffle([...picked, ...picked]).map((emoji, id) => ({ id, emoji, flipped: false, matched: false }));
-      salaRef.child('estado').set({ cards, cur: 0, flipped: [], donePairs: 0, players: [{ score: 0 }, { score: 0 }] });
+      salaRef.child('estado').set({ cards, cur: 0, flipped: [], donePairs: 0, players: [{ score: 0 }, { score: 0 }], turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
 
     showScreen('screen-game');
@@ -761,7 +772,7 @@ function iniciarOnline(codigo) {
       renderBoard();
       refreshScores();
       setTurnBar();
-      iniciarTimer();
+      iniciarTimer(e.turnStartTime || Date.now());
 
       if (G.flipped.length === 2 && G.cur === meuIndex) setTimeout(checkMatchOnline, 950);
       if (G.donePairs === G.totalPairs) setTimeout(endGame, 600);
@@ -778,10 +789,10 @@ function checkMatchOnline() {
   if (hit) {
     cards[a].matched = cards[b].matched = true;
     placar[G.cur].score++;
-    salaRef.child('estado').update({ cards, flipped: [], donePairs: G.donePairs + 1, players: placar });
+    salaRef.child('estado').update({ cards, flipped: [], donePairs: G.donePairs + 1, players: placar, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
   } else {
     cards[a].flipped = cards[b].flipped = false;
-    salaRef.child('estado').update({ cards, flipped: [], cur: (G.cur + 1) % 2, players: placar });
+    salaRef.child('estado').update({ cards, flipped: [], cur: (G.cur + 1) % 2, players: placar, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
   }
 }
 

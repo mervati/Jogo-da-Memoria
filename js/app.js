@@ -47,6 +47,7 @@ let G = {};
 let jogoTimer      = null;
 let jogoTempo      = 0;
 let jogoTentativas = 0;
+let jogoStartOnline = 0;
 
 // ─────────────────────────────────────────────
 // SETUP HELPERS
@@ -56,8 +57,16 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   playMusic();
-  if (id === 'screen-records') mostrarRecordes();
-  if (id === 'screen-ranking') carregarRanking('4x4');
+}
+
+function switchTab(panelId, tabEl) {
+  const card = tabEl.closest('.glass-card');
+  card.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  card.querySelectorAll('.screen-tab').forEach(t => t.classList.remove('sel'));
+  document.getElementById(panelId).style.display = 'block';
+  tabEl.classList.add('sel');
+  if (panelId === 'tab-recordes') mostrarRecordes();
+  if (panelId === 'tab-ranking')  carregarRanking('4x4');
 }
 
 function pick(el) {
@@ -442,10 +451,8 @@ function endGame() {
   let posRecorde = 0;
   if (isAI && humanP && aiP && humanP.score > aiP.score) {
     posRecorde = salvarRecorde(humanP.name, cfg.size, diffLabel[cfg.diff], jogoTempo, jogoTentativas);
-    salvarRankingGlobal(humanP.name, cfg.size, diffLabel[cfg.diff], jogoTentativas, jogoTempo);
   } else if (!isAI && winners.length === 1) {
     posRecorde = salvarRecorde(winners[0].name, cfg.size, 'Multi', jogoTempo, jogoTentativas);
-    salvarRankingGlobal(winners[0].name, cfg.size, 'Multi', jogoTentativas, jogoTempo);
   }
   document.getElementById('end-record').textContent =
     posRecorde ? `🏅 Novo recorde! ${['','🥇','🥈','🥉','4️⃣','5️⃣'][posRecorde]} Top ${posRecorde}` : '';
@@ -599,6 +606,8 @@ function iniciarOnline(codigo) {
       salaRef.child('estado').set({ cards, cur: 0, flipped: [], donePairs: 0, players: [{ score: 0 }, { score: 0 }], turnStartTime: firebase.database.ServerValue.TIMESTAMP });
     }
 
+    jogoTentativas = 0;
+    jogoStartOnline = Date.now();
     gameEnded = false;
     showScreen('screen-game');
     renderScores();
@@ -621,7 +630,7 @@ function iniciarOnline(codigo) {
 
     const outroIndex = meuIndex === 0 ? 1 : 0;
     salaRef.child('jogadores/' + outroIndex + '/online').on('value', snap => {
-      if (snap.val() === false && G.players[outroIndex]) {
+      if (snap.val() === false && G.players && G.players[outroIndex]) {
         G.busy = true;
         let segundos = 10;
         const turnBar = document.getElementById('turn-bar');
@@ -715,6 +724,11 @@ function mostrarFimOnline(s0, s1, t0, t1) {
     </tr>`;
 
   const isWinner = (s0 > s1 && meuIndex === 0) || (s1 > s0 && meuIndex === 1);
+  if (isWinner) {
+    const tempoOnline = Math.floor((Date.now() - jogoStartOnline) / 1000);
+    const meuNome = G.players[meuIndex].name;
+    salvarRankingGlobal(meuNome, cfg.osize, 'Online', jogoTentativas, tempoOnline);
+  }
   const revArea  = document.getElementById('revanche-area');
 
   if (!isWinner) {
@@ -823,6 +837,7 @@ function checkMatchOnline() {
   const cards  = G.cards.map(c => ({ ...c }));
   const placar = G.players.map(p => ({ score: p.score }));
 
+  jogoTentativas++;
   if (hit) {
     cards[a].matched = cards[b].matched = true;
     placar[G.cur].score++;

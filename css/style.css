@@ -424,6 +424,35 @@ body {
 }
 
 /* ── RANKING GLOBAL ── */
+/* ── ABAS DE TELA (Jogar/Recordes, Online/Ranking) ── */
+.screen-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  background: rgba(255,255,255,.06);
+  border-radius: 14px;
+  padding: 4px;
+  width: 100%;
+}
+.screen-tab {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--txt-dim);
+  cursor: pointer;
+  font-size: .9rem;
+  font-weight: 600;
+  transition: all .2s;
+  outline: none;
+  white-space: nowrap;
+}
+.screen-tab:hover { color: #fff; background: rgba(255,255,255,.08); }
+.screen-tab.sel   { background: rgba(var(--accent-rgb),.22); color: #fff; }
+
+.tab-panel { width: 100%; }
+
 .rank-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
 .rank-tab {
   padding: 8px 22px; border-radius: 20px;

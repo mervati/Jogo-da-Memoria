@@ -54,8 +54,6 @@
     <p class="menu-sub">Encontre todos os pares e derrote seus adversários!</p>
     <button class="btn btn-primary"   onclick="showScreen('screen-setup')">Jogar</button>
     <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-online')">🌐 Jogar Online</button>
-    <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-records')">🏅 Recordes</button>
-    <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-ranking')">🌍 Ranking Global</button>
     <p class="menu-credit">Desenvolvido por <span>Mariana Ervati</span></p>
   </div>
 </div>
@@ -63,99 +61,128 @@
 <!-- ═══ ONLINE ═══ -->
 <div id="screen-online" class="screen">
 <div class="glass-card">
-  <h2 class="setup-title">🌐 Jogar Online</h2>
-
-  <div class="setup-section">
-    <div class="setup-label">Seu Nome</div>
-    <input class="p-input" id="online-name" type="text" placeholder="Digite seu nome" maxlength="20">
+  <div class="screen-tabs">
+    <button class="screen-tab sel" onclick="switchTab('tab-online-jogar', this)">🌐 Jogar Online</button>
+    <button class="screen-tab"     onclick="switchTab('tab-ranking', this)">🌍 Ranking Global</button>
   </div>
 
-  <div class="setup-section">
-    <div class="setup-label">Tamanho do Tabuleiro</div>
-    <div class="option-group">
-      <div class="opt sel" data-g="osize" data-v="4x4" onclick="pick(this)">4 × 4 &nbsp;(8 pares)</div>
-      <div class="opt"     data-g="osize" data-v="4x5" onclick="pick(this)">4 × 5 &nbsp;(10 pares)</div>
-      <div class="opt"     data-g="osize" data-v="6x6" onclick="pick(this)">6 × 6 &nbsp;(18 pares)</div>
-    </div>
-  </div>
-
-  <div class="setup-actions" style="flex-direction:column; align-items:center; gap:14px;">
-    <button class="btn btn-primary" onclick="criarSala()">➕ Criar Sala</button>
-
-    <div style="display:flex; gap:10px; align-items:center;">
-      <input class="p-input" id="codigo-sala" type="text" placeholder="Código da sala" maxlength="6" style="width:160px; text-transform:uppercase;">
-      <button class="btn btn-secondary" onclick="entrarSala()">Entrar</button>
+  <!-- Aba: Jogar Online -->
+  <div id="tab-online-jogar" class="tab-panel">
+    <div class="setup-section">
+      <div class="setup-label">Seu Nome</div>
+      <input class="p-input" id="online-name" type="text" placeholder="Digite seu nome" maxlength="20">
     </div>
 
-    <div id="online-status" style="color:#888; font-size:.9rem; min-height:20px;"></div>
+    <div class="setup-section">
+      <div class="setup-label">Tamanho do Tabuleiro</div>
+      <div class="option-group">
+        <div class="opt sel" data-g="osize" data-v="4x4" onclick="pick(this)">4 × 4 &nbsp;(8 pares)</div>
+        <div class="opt"     data-g="osize" data-v="4x5" onclick="pick(this)">4 × 5 &nbsp;(10 pares)</div>
+        <div class="opt"     data-g="osize" data-v="6x6" onclick="pick(this)">6 × 6 &nbsp;(18 pares)</div>
+      </div>
+    </div>
+
+    <div class="setup-actions" style="flex-direction:column; align-items:center; gap:14px;">
+      <button class="btn btn-primary" onclick="criarSala()">➕ Criar Sala</button>
+
+      <div style="display:flex; gap:10px; align-items:center;">
+        <input class="p-input" id="codigo-sala" type="text" placeholder="Código da sala" maxlength="6" style="width:160px; text-transform:uppercase;">
+        <button class="btn btn-secondary" onclick="entrarSala()">Entrar</button>
+      </div>
+
+      <div id="online-status" style="color:#888; font-size:.9rem; min-height:20px;"></div>
+    </div>
+
+    <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
   </div>
 
-  <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
+  <!-- Aba: Ranking Global -->
+  <div id="tab-ranking" class="tab-panel" style="display:none">
+    <div class="rank-tabs">
+      <button class="rank-tab sel" onclick="carregarRanking('4x4', this)">4 × 4</button>
+      <button class="rank-tab"     onclick="carregarRanking('4x5', this)">4 × 5</button>
+      <button class="rank-tab"     onclick="carregarRanking('6x6', this)">6 × 6</button>
+    </div>
+    <div id="ranking-lista"></div>
+    <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
+  </div>
 </div>
 </div>
 
 <!-- ═══ SETUP ═══ -->
 <div id="screen-setup" class="screen">
 <div class="glass-card">
-  <h2 class="setup-title">⚙️ Configurar Partida</h2>
+  <div class="screen-tabs">
+    <button class="screen-tab sel" onclick="switchTab('tab-jogar', this)">⚙️ Jogar</button>
+    <button class="screen-tab"     onclick="switchTab('tab-recordes', this)">🏅 Recordes</button>
+  </div>
 
-  <!-- Modo -->
-  <div class="setup-section">
-    <div class="setup-label">Modo de Jogo</div>
-    <div class="option-group">
-      <div class="opt sel" data-g="mode" data-v="ai" onclick="pick(this)">🤖 Humano × Máquina</div>
-      <div class="opt"     data-g="mode" data-v="multi" onclick="pick(this)">👥 Multijogador (2–4)</div>
+  <!-- Aba: Jogar -->
+  <div id="tab-jogar" class="tab-panel">
+    <!-- Modo -->
+    <div class="setup-section">
+      <div class="setup-label">Modo de Jogo</div>
+      <div class="option-group">
+        <div class="opt sel" data-g="mode" data-v="ai" onclick="pick(this)">🤖 Humano × Máquina</div>
+        <div class="opt"     data-g="mode" data-v="multi" onclick="pick(this)">👥 Multijogador (2–4)</div>
+      </div>
+    </div>
+
+    <!-- Nome do jogador (modo AI) -->
+    <div class="setup-section" id="sec-hname">
+      <div class="setup-label">Seu Nome</div>
+      <div class="player-inputs">
+        <input class="p-input" id="human-name" type="text" placeholder="Jogador 1" maxlength="20"
+          style="border-color:#e9456066;">
+      </div>
+    </div>
+
+    <!-- Dificuldade (modo AI) -->
+    <div class="setup-section" id="sec-diff">
+      <div class="setup-label">Dificuldade da Máquina</div>
+      <div class="option-group">
+        <div class="opt sel" data-g="diff" data-v="easy"   onclick="pick(this)">😊 Fácil</div>
+        <div class="opt"     data-g="diff" data-v="medium" onclick="pick(this)">🧠 Médio</div>
+        <div class="opt"     data-g="diff" data-v="hard"   onclick="pick(this)">😈 Difícil</div>
+      </div>
+    </div>
+
+    <!-- Número de jogadores (modo multi) -->
+    <div class="setup-section" id="sec-nump" style="display:none;">
+      <div class="setup-label">Número de Jogadores</div>
+      <div class="option-group">
+        <div class="opt sel" data-g="np" data-v="2" onclick="pick(this);buildNames()">2 Jogadores</div>
+        <div class="opt"     data-g="np" data-v="3" onclick="pick(this);buildNames()">3 Jogadores</div>
+        <div class="opt"     data-g="np" data-v="4" onclick="pick(this);buildNames()">4 Jogadores</div>
+      </div>
+    </div>
+
+    <!-- Nomes dos jogadores (modo multi) -->
+    <div class="setup-section" id="sec-names" style="display:none;">
+      <div class="setup-label">Nomes dos Jogadores</div>
+      <div class="player-inputs" id="names-container"></div>
+    </div>
+
+    <!-- Tamanho do tabuleiro -->
+    <div class="setup-section">
+      <div class="setup-label">Tamanho do Tabuleiro</div>
+      <div class="option-group">
+        <div class="opt sel" data-g="size" data-v="4x4" onclick="pick(this)">4 × 4 &nbsp;(8 pares)</div>
+        <div class="opt"     data-g="size" data-v="4x5" onclick="pick(this)">4 × 5 &nbsp;(10 pares)</div>
+        <div class="opt"     data-g="size" data-v="6x6" onclick="pick(this)">6 × 6 &nbsp;(18 pares)</div>
+      </div>
+    </div>
+
+    <div class="setup-actions">
+      <button class="btn btn-secondary" onclick="showScreen('screen-menu')">← Voltar</button>
+      <button class="btn btn-primary"   onclick="startGame()">Iniciar ▶</button>
     </div>
   </div>
 
-  <!-- Nome do jogador (modo AI) -->
-  <div class="setup-section" id="sec-hname">
-    <div class="setup-label">Seu Nome</div>
-    <div class="player-inputs">
-      <input class="p-input" id="human-name" type="text" placeholder="Jogador 1" maxlength="20"
-        style="border-color:#e9456066;">
-    </div>
-  </div>
-
-  <!-- Dificuldade (modo AI) -->
-  <div class="setup-section" id="sec-diff">
-    <div class="setup-label">Dificuldade da Máquina</div>
-    <div class="option-group">
-      <div class="opt sel" data-g="diff" data-v="easy"   onclick="pick(this)">😊 Fácil</div>
-      <div class="opt"     data-g="diff" data-v="medium" onclick="pick(this)">🧠 Médio</div>
-      <div class="opt"     data-g="diff" data-v="hard"   onclick="pick(this)">😈 Difícil</div>
-    </div>
-  </div>
-
-  <!-- Número de jogadores (modo multi) -->
-  <div class="setup-section" id="sec-nump" style="display:none;">
-    <div class="setup-label">Número de Jogadores</div>
-    <div class="option-group">
-      <div class="opt sel" data-g="np" data-v="2" onclick="pick(this);buildNames()">2 Jogadores</div>
-      <div class="opt"     data-g="np" data-v="3" onclick="pick(this);buildNames()">3 Jogadores</div>
-      <div class="opt"     data-g="np" data-v="4" onclick="pick(this);buildNames()">4 Jogadores</div>
-    </div>
-  </div>
-
-  <!-- Nomes dos jogadores (modo multi) -->
-  <div class="setup-section" id="sec-names" style="display:none;">
-    <div class="setup-label">Nomes dos Jogadores</div>
-    <div class="player-inputs" id="names-container"></div>
-  </div>
-
-  <!-- Tamanho do tabuleiro -->
-  <div class="setup-section">
-    <div class="setup-label">Tamanho do Tabuleiro</div>
-    <div class="option-group">
-      <div class="opt sel" data-g="size" data-v="4x4" onclick="pick(this)">4 × 4 &nbsp;(8 pares)</div>
-      <div class="opt"     data-g="size" data-v="4x5" onclick="pick(this)">4 × 5 &nbsp;(10 pares)</div>
-      <div class="opt"     data-g="size" data-v="6x6" onclick="pick(this)">6 × 6 &nbsp;(18 pares)</div>
-    </div>
-  </div>
-
-  <div class="setup-actions">
-    <button class="btn btn-secondary" onclick="showScreen('screen-menu')">← Voltar</button>
-    <button class="btn btn-primary"   onclick="startGame()">Iniciar ▶</button>
+  <!-- Aba: Recordes -->
+  <div id="tab-recordes" class="tab-panel" style="display:none">
+    <div id="records-list"></div>
+    <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
   </div>
 </div>
 </div>
@@ -204,28 +231,6 @@
 </div>
 </div>
 
-<!-- ═══ RECORDES ═══ -->
-<div id="screen-records" class="screen">
-<div class="glass-card">
-  <h2 class="setup-title">🏅 Recordes</h2>
-  <div id="records-list"></div>
-  <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
-</div>
-</div>
-
-<!-- ═══ RANKING GLOBAL ═══ -->
-<div id="screen-ranking" class="screen">
-<div class="glass-card">
-  <h2 class="setup-title">🌍 Ranking Global</h2>
-  <div class="rank-tabs">
-    <button class="rank-tab sel" onclick="carregarRanking('4x4', this)">4 × 4</button>
-    <button class="rank-tab"     onclick="carregarRanking('4x5', this)">4 × 5</button>
-    <button class="rank-tab"     onclick="carregarRanking('6x6', this)">6 × 6</button>
-  </div>
-  <div id="ranking-lista"></div>
-  <button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>
-</div>
-</div>
 
 <!-- ═══ TEMA WIDGET (fixo em todas as telas) ═══ -->
 <div class="theme-widget">

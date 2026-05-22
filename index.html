@@ -418,10 +418,9 @@ function renderBoard() {
   board.innerHTML = '';
   board.style.gridTemplateColumns = `repeat(${G.cols}, 1fr)`;
 
-  // Responsive card size
-  const vw        = Math.min(window.innerWidth - 40, 960);
-  const cardSize  = Math.floor((vw - G.cols * 9) / G.cols);
-  const capped    = Math.min(cardSize, 110);
+  const vw       = Math.min(window.innerWidth - 40, 960);
+  const cardSize = Math.floor((vw - G.cols * 9) / G.cols);
+  const capped   = Math.min(cardSize, 110);
   board.style.width = `${capped * G.cols + 9 * (G.cols - 1)}px`;
 
   G.cards.forEach((card, i) => {
@@ -435,6 +434,29 @@ function renderBoard() {
       </div>`;
     if (!card.flipped && !card.matched) el.addEventListener('click', () => onCardClick(i));
     board.appendChild(el);
+  });
+}
+
+function updateBoard(anterior, nova) {
+  nova.forEach((card, i) => {
+    const el  = document.getElementById(`c${i}`);
+    if (!el) return;
+    const old = anterior[i] || {};
+
+    if (card.matched && !old.matched) {
+      setTimeout(() => {
+        el.classList.add('matched');
+        el.classList.remove('flipped');
+        el.style.pointerEvents = 'none';
+      }, 50);
+    } else if (card.flipped && !old.flipped && !card.matched) {
+      setTimeout(() => el.classList.add('flipped'), 50);
+      el.style.pointerEvents = 'none';
+    } else if (!card.flipped && old.flipped && !card.matched) {
+      el.classList.remove('flipped');
+      el.style.pointerEvents = '';
+      el.onclick = () => onCardClick(i);
+    }
   });
 }
 
@@ -762,6 +784,8 @@ function iniciarOnline(codigo) {
       const e = snap.val();
       if (!e || !e.cards) return;
 
+      const cardsAnterior = G.cards.length ? G.cards.map(c => ({ ...c })) : [];
+
       G.cards     = e.cards;
       G.cur       = e.cur;
       G.flipped   = e.flipped || [];
@@ -769,7 +793,11 @@ function iniciarOnline(codigo) {
       e.players.forEach((p, i) => { G.players[i].score = p.score; });
       G.busy = G.flipped.length >= 2;
 
-      renderBoard();
+      if (cardsAnterior.length === 0) {
+        renderBoard();
+      } else {
+        updateBoard(cardsAnterior, G.cards);
+      }
       refreshScores();
       setTurnBar();
       iniciarTimer(e.turnStartTime || Date.now());

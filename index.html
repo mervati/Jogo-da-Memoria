@@ -142,6 +142,20 @@ body {
 .final-item .fi-score { font-weight: 800; color: var(--pc); }
 .end-btns { display: flex; gap: 12px; }
 
+/* ── ONLINE END ── */
+.online-scores-table {
+  width: 100%; max-width: 420px; border-collapse: collapse; margin-bottom: 20px;
+}
+.online-scores-table th {
+  color: #555; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: 1px; padding: 6px 16px; text-align: center;
+}
+.online-scores-table td {
+  padding: 10px 16px; text-align: center;
+  background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.revanche-area { margin: 16px 0; text-align: center; min-height: 60px; }
+
 @media (max-width: 520px) {
   .menu-title { font-size: 2rem; }
   .front { font-size: 1.5rem; }
@@ -266,6 +280,15 @@ body {
   <div class="timer-bar"    id="timer-bar"></div>
   <div class="board"        id="board"></div>
   <button class="btn btn-secondary game-menu-btn" onclick="askMenu()">Menu</button>
+</div>
+
+<!-- ═══ ONLINE END ═══ -->
+<div id="screen-end-online" class="screen">
+  <div class="trophy">🏆</div>
+  <div class="winner-txt" id="online-winner-txt"></div>
+  <table class="online-scores-table" id="online-scores-table"></table>
+  <div class="revanche-area" id="revanche-area"></div>
+  <button class="btn btn-secondary" onclick="voltarMenuOnline()">← Menu</button>
 </div>
 
 <!-- ═══ END ═══ -->
@@ -704,7 +727,7 @@ function criarSala() {
   const codigo = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   salaRef = db.ref('salas/' + codigo);
-  salaRef.set({ jogadores: { 0: { nome, score: 0 } }, status: 'aguardando', tamanho: cfg.osize });
+  salaRef.set({ jogadores: { 0: { nome, score: 0 } }, status: 'aguardando', tamanho: cfg.osize, placarTotal: { 0: 0, 1: 0 }, revanche: { pedido: false } });
 
   meuIndex = 0;
   document.getElementById('online-status').innerHTML =
@@ -803,9 +826,144 @@ function iniciarOnline(codigo) {
       iniciarTimer(e.turnStartTime || Date.now());
 
       if (G.flipped.length === 2 && G.cur === meuIndex) setTimeout(checkMatchOnline, 950);
-      if (G.donePairs === G.totalPairs) setTimeout(endGame, 600);
+      if (G.donePairs === G.totalPairs) setTimeout(G.online ? endGameOnline : endGame, 600);
     });
   });
+}
+
+function endGameOnline() {
+  clearInterval(timerInterval);
+  const s0 = G.players[0].score;
+  const s1 = G.players[1].score;
+
+  if (meuIndex === 0) {
+    salaRef.child('placarTotal').once('value', snap => {
+      const pt = snap.val() || { 0: 0, 1: 0 };
+      salaRef.child('placarTotal').set({ 0: pt[0] + s0, 1: pt[1] + s1 });
+      salaRef.child('revanche').set({ pedido: false });
+    });
+  }
+
+  setTimeout(() => {
+    salaRef.child('placarTotal').once('value', snap => {
+      const pt = snap.val() || { 0: s0, 1: s1 };
+      mostrarFimOnline(s0, s1, pt[0], pt[1]);
+    });
+  }, meuIndex === 0 ? 400 : 700);
+}
+
+function mostrarFimOnline(s0, s1, t0, t1) {
+  let winnerTxt;
+  if (s0 === s1)      winnerTxt = '🤝 Empate!';
+  else if (s0 > s1)   winnerTxt = `🏆 ${sanitize(G.players[0].name)} venceu!`;
+  else                winnerTxt = `🏆 ${sanitize(G.players[1].name)} venceu!`;
+  document.getElementById('online-winner-txt').innerHTML = winnerTxt;
+
+  document.getElementById('online-scores-table').innerHTML = `
+    <tr>
+      <th></th><th>Este jogo</th><th>Total</th>
+    </tr>
+    <tr>
+      <td style="color:${G.players[0].color};font-weight:700">👤 ${sanitize(G.players[0].name)}</td>
+      <td style="color:${G.players[0].color};font-weight:800;font-size:1.1rem">${s0}</td>
+      <td style="color:#666">${t0}</td>
+    </tr>
+    <tr>
+      <td style="color:${G.players[1].color};font-weight:700">👤 ${sanitize(G.players[1].name)}</td>
+      <td style="color:${G.players[1].color};font-weight:800;font-size:1.1rem">${s1}</td>
+      <td style="color:#666">${t1}</td>
+    </tr>`;
+
+  const isWinner = (s0 > s1 && meuIndex === 0) || (s1 > s0 && meuIndex === 1);
+  const revArea  = document.getElementById('revanche-area');
+
+  if (!isWinner) {
+    revArea.innerHTML = `<button class="btn btn-primary" onclick="pedirRevanche()">🔄 Pedir Revanche</button>`;
+  } else {
+    revArea.innerHTML = `<p style="color:#666;font-size:.9rem">Aguardando o adversário...</p>`;
+  }
+
+  showScreen('screen-end-online');
+
+  salaRef.child('revanche').on('value', snap => {
+    const rev = snap.val();
+    if (!rev) return;
+
+    if (rev.aceito === true)  { salaRef.child('revanche').off(); iniciarRevanche(); return; }
+    if (rev.aceito === false) {
+      salaRef.child('revanche').off();
+      revArea.innerHTML = `<p style="color:#e94560">Revanche recusada.</p>`;
+      setTimeout(() => { voltarMenuOnline(); }, 2000);
+      return;
+    }
+
+    if (rev.pedido && rev.de !== meuIndex && isWinner) {
+      let seg = 20;
+      const nomePedinte = sanitize(G.players[rev.de].name);
+      const mostrar = () => {
+        revArea.innerHTML = `
+          <p style="color:#fff;font-weight:700;margin-bottom:12px">🔄 ${nomePedinte} quer revanche!</p>
+          <div style="display:flex;gap:10px;justify-content:center">
+            <button class="btn btn-primary"   onclick="aceitarRevanche()">Aceitar (${seg}s)</button>
+            <button class="btn btn-secondary" onclick="recusarRevanche()">Recusar</button>
+          </div>`;
+      };
+      mostrar();
+      const t = setInterval(() => {
+        seg--;
+        if (seg <= 0) { clearInterval(t); recusarRevanche(); }
+        else mostrar();
+      }, 1000);
+    }
+
+    if (rev.pedido && rev.de === meuIndex) {
+      revArea.innerHTML = `<p style="color:#888;font-size:.9rem">Aguardando resposta...</p>`;
+    }
+  });
+}
+
+function pedirRevanche() {
+  document.getElementById('revanche-area').innerHTML = `<p style="color:#888;font-size:.9rem">Aguardando resposta...</p>`;
+  salaRef.child('revanche').set({ pedido: true, de: meuIndex });
+}
+
+function aceitarRevanche() {
+  salaRef.child('revanche').set({ pedido: false, aceito: true });
+}
+
+function recusarRevanche() {
+  salaRef.child('revanche').set({ pedido: false, aceito: false });
+}
+
+function iniciarRevanche() {
+  G.cards = [];
+  G.flipped = [];
+  G.cur = 0;
+  G.busy = false;
+  G.donePairs = 0;
+  G.players.forEach(p => p.score = 0);
+
+  if (meuIndex === 0) {
+    const chave  = G.cols === 4 ? '4x4' : G.cols === 5 ? '4x5' : '6x6';
+    const picked = shuffle([...EMOJIS]).slice(0, G.totalPairs);
+    const cards  = shuffle([...picked, ...picked]).map((emoji, id) => ({ id, emoji, flipped: false, matched: false }));
+    salaRef.child('estado').set({ cards, cur: 0, flipped: [], donePairs: 0, players: [{ score: 0 }, { score: 0 }], turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+    salaRef.child('revanche').set({ pedido: false });
+  }
+
+  showScreen('screen-game');
+  renderScores();
+}
+
+function voltarMenuOnline() {
+  if (salaRef) {
+    salaRef.child('jogadores/' + meuIndex + '/online').set(false);
+    salaRef.child('revanche').off();
+    salaRef.off();
+  }
+  clearInterval(timerInterval);
+  G = {};
+  showScreen('screen-menu');
 }
 
 function checkMatchOnline() {

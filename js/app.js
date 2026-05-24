@@ -38,7 +38,7 @@ const SIZES = {
 // ─────────────────────────────────────────────
 // CONFIG STATE (setup screen values)
 // ─────────────────────────────────────────────
-const cfg = { mode:'ai', diff:'easy', np:2, size:'4x4', osize:'4x4' };
+const cfg = { mode:'ai', diff:'easy', np:2, size:'4x4', osize:'4x4', onp:2 };
 
 // ─────────────────────────────────────────────
 // GAME STATE
@@ -268,6 +268,7 @@ function refreshScores() {
   G.players.forEach((p, i) => {
     const el = document.getElementById(`ps${i}`);
     if (!el) return;
+    if (p.removido) { el.style.display = 'none'; return; }
     const ppEl     = el.querySelector('.pp');
     const oldScore = parseInt(ppEl.textContent) || 0;
     const scored   = p.score > oldScore;
@@ -292,7 +293,7 @@ function setTurnBar(thinking = false) {
   let turnLabel;
   if (p.isAI) {
     turnLabel = `${ic} Vez da máquina`;
-  } else if (p.name === 'Você') {
+  } else if (G.online && G.cur === G.meuIndex) {
     turnLabel = `${ic} Sua vez de jogar`;
   } else {
     turnLabel = `${ic} Vez de <span>${sanitize(p.name)}</span>`;
@@ -592,7 +593,7 @@ function iniciarTimer(turnStartTime) {
       clearInterval(timerInterval);
       if (G.online && G.cur === G.meuIndex && !G.busy) {
         salaRef.child('estado').update({
-          cur: 1 - G.cur,
+          cur: nextActivePlayer(G.cur),
           flipped: [],
           turnStartTime: firebase.database.ServerValue.TIMESTAMP
         });
@@ -623,6 +624,22 @@ function atualizarTimerDisplay() {
   el.style.color = timerSegundos <= 10 ? '#e94560' : '#888';
 }
 
+function nextActivePlayer(from) {
+  const n = G.players.length;
+  for (let i = 1; i < n; i++) {
+    const idx = (from + i) % n;
+    if (!G.players[idx].removido) return idx;
+  }
+  return from;
+}
+
+function euSouMaster() {
+  for (let i = 0; i < G.players.length; i++) {
+    if (!G.players[i].removido) return i === meuIndex;
+  }
+  return false;
+}
+
 function copiarCodigo(codigo, btn) {
   navigator.clipboard.writeText(codigo).then(() => {
     btn.textContent = '✅ Copiado!';
@@ -632,27 +649,41 @@ function copiarCodigo(codigo, btn) {
 
 function criarSala() {
   const nome = cleanNome(document.getElementById('online-name').value.trim() || 'Jogador 1');
+  const maxJogadores = parseInt(cfg.onp) || 2;
   const codigo = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   salaRef = db.ref('salas/' + codigo);
   salaRef.set({
     jogadores: { 0: { nome, score: 0 } },
-    status: 'aguardando', tamanho: cfg.osize,
-    placarTotal: { 0: 0, 1: 0 }, revanche: { pedido: false }
+    maxJogadores, status: 'aguardando', tamanho: cfg.osize,
+    revanche: { pedido: false }
   });
   meuIndex = 0;
 
-  document.getElementById('online-status').innerHTML =
-    `Sala criada! Compartilhe o código:<br>
-     <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0">
-       <strong style="color:#4fc3f7;font-size:1.3rem;letter-spacing:3px">${codigo}</strong>
-       <button onclick="copiarCodigo('${codigo}', this)"
-         style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
-                border-radius:8px;color:#eee;padding:4px 10px;cursor:pointer;font-size:.8rem">
-         📋 Copiar
-       </button>
-     </div>
-     <span style="color:#888;font-size:.82rem">Aguardando adversário...</span>`;
+  const statusEl = document.getElementById('online-status');
+
+  function atualizarSalaEspera(jogadores) {
+    const count = Object.keys(jogadores).length;
+    const lista = Object.values(jogadores).map(j => `• ${sanitize(j.nome || 'Jogador')}`).join('<br>');
+    const podeComecar = count >= 2;
+    statusEl.innerHTML =
+      `Sala criada! Compartilhe o código:<br>
+       <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0">
+         <strong style="color:#4fc3f7;font-size:1.3rem;letter-spacing:3px">${codigo}</strong>
+         <button onclick="copiarCodigo('${codigo}', this)"
+           style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+                  border-radius:8px;color:#eee;padding:4px 10px;cursor:pointer;font-size:.8rem">
+           📋 Copiar
+         </button>
+       </div>
+       <div style="font-size:.85rem;color:#bbb;margin-bottom:8px">${lista}</div>
+       <span style="color:#888;font-size:.82rem">Aguardando jogadores (${count}/${maxJogadores})…</span>
+       ${podeComecar ? `<br><button class="btn btn-primary" style="margin-top:10px" onclick="iniciarJogoOnline('${codigo}')">▶ Iniciar Partida</button>` : ''}`;
+  }
+
+  salaRef.child('jogadores').on('value', snap => {
+    if (snap.val()) atualizarSalaEspera(snap.val());
+  });
 
   salaRef.child('status').on('value', snap => {
     if (snap.val() === 'jogando') {
@@ -660,6 +691,11 @@ function criarSala() {
       iniciarOnline(codigo);
     }
   });
+}
+
+function iniciarJogoOnline(codigo) {
+  salaRef.child('jogadores').off();
+  salaRef.child('status').set('jogando');
 }
 
 function entrarSala() {
@@ -679,14 +715,36 @@ function entrarSala() {
       salaRef = null; return;
     }
     const jogadores = sala.jogadores || {};
-    if (Object.keys(jogadores).length >= 2) {
+    const max = sala.maxJogadores || 2;
+    const count = Object.keys(jogadores).length;
+    if (count >= max) {
       document.getElementById('online-status').textContent = 'Sala cheia.';
       salaRef = null; return;
     }
-    meuIndex = 1;
-    salaRef.child('jogadores/1').set({ nome, score: 0 });
-    salaRef.child('status').set('jogando');
-    iniciarOnline(codigo);
+    meuIndex = count;
+    salaRef.child('jogadores/' + meuIndex).set({ nome, score: 0 });
+
+    const statusEl = document.getElementById('online-status');
+
+    function atualizarSalaEspera(jogadores) {
+      const n = Object.keys(jogadores).length;
+      const lista = Object.values(jogadores).map(j => `• ${sanitize(j.nome || 'Jogador')}`).join('<br>');
+      statusEl.innerHTML =
+        `<div style="font-size:.85rem;color:#bbb;margin-bottom:8px">${lista}</div>
+         <span style="color:#888;font-size:.82rem">Aguardando o anfitrião iniciar (${n}/${max})…</span>`;
+    }
+
+    salaRef.child('jogadores').on('value', snap => {
+      if (snap.val()) atualizarSalaEspera(snap.val());
+    });
+
+    salaRef.child('status').on('value', snap => {
+      if (snap.val() === 'jogando') {
+        salaRef.child('status').off();
+        salaRef.child('jogadores').off();
+        iniciarOnline(codigo);
+      }
+    });
   });
 }
 
@@ -704,28 +762,25 @@ function iniciarOnline(codigo) {
   salaRef.once('value', snap => {
     const sala = snap.val();
     const jogadores = sala.jogadores || {};
-    const outroIdx  = 1 - meuIndex;
+    const total = Object.keys(jogadores).length;
 
     G = {
       cards: [], flipped: [], cur: 0, busy: false, aiMem: {},
       totalPairs: SIZES[sala.tamanho || '4x4'].pairs,
       donePairs: 0, cols: SIZES[sala.tamanho || '4x4'].cols,
       online: true, meuIndex,
-      players: [
-        { name: jogadores[0] ? jogadores[0].nome : 'Jogador 1', score: 0, isAI: false, color: COLORS[0], rgb: COLORS_RGB[0] },
-        { name: jogadores[1] ? jogadores[1].nome : 'Jogador 2', score: 0, isAI: false, color: COLORS[1], rgb: COLORS_RGB[1] }
-      ]
+      players: Array.from({ length: total }, (_, i) => ({
+        name: jogadores[i] ? jogadores[i].nome : `Jogador ${i + 1}`,
+        score: 0, isAI: false, color: COLORS[i], rgb: COLORS_RGB[i], removido: false
+      }))
     };
 
     if (meuIndex === 0) {
       const picked = shuffle([...EMOJIS]).slice(0, G.totalPairs);
       const cards = shuffle([...picked, ...picked]).map((emoji, id) => ({ id, emoji, flipped: false, matched: false }));
+      const players = G.players.map(() => ({ score: 0, removido: false }));
       salaRef.child('estado').set({
-        cards, cur: 0, flipped: [], donePairs: 0,
-        players: [
-          { score: 0 },
-          { score: 0 }
-        ],
+        cards, cur: 0, flipped: [], donePairs: 0, players,
         turnStartTime: firebase.database.ServerValue.TIMESTAMP
       });
     }
@@ -748,38 +803,40 @@ function iniciarOnline(codigo) {
     });
 
     jugadorOnline = {};
-    jugadorOnline[meuIndex] = true;
-    jugadorOnline[outroIdx] = true;
+    for (let i = 0; i < total; i++) jugadorOnline[i] = true;
     const minhaRef = salaRef.child('jogadores/' + meuIndex + '/online');
     minhaRef.set(true);
     minhaRef.onDisconnect().set(false);
 
-    salaRef.child('jogadores/' + outroIdx + '/online').on('value', snap => {
-      const prevOnline = jugadorOnline[outroIdx];
-      jugadorOnline[outroIdx] = snap.val() !== false;
-      if (!G.players || !G.players[outroIdx]) return;
-      const nome = sanitize(G.players[outroIdx].name);
+    for (let i = 0; i < total; i++) {
+      if (i === meuIndex) continue;
+      (function(idx) {
+        salaRef.child('jogadores/' + idx + '/online').on('value', snap => {
+          const prevOnline = jugadorOnline[idx];
+          jugadorOnline[idx] = snap.val() !== false;
+          if (!G.players || !G.players[idx] || G.players[idx].removido) return;
 
-      if (!jugadorOnline[outroIdx] && prevOnline !== false) {
-        let seg = 10;
-        const turnBar = document.getElementById('turn-bar');
-        const atualizar = () => {
-          if (turnBar) turnBar.innerHTML = `⚠️ <span>${nome}</span> saiu. Voltando ao menu em ${seg}s…`;
-        };
-        atualizar();
-        clearInterval(desconexaoTimer);
-        desconexaoTimer = setInterval(() => {
-          seg--;
-          if (seg <= 0) {
-            clearInterval(desconexaoTimer); desconexaoTimer = null;
-            voltarMenuOnline();
-          } else {
-            atualizar();
+          if (!jugadorOnline[idx] && prevOnline !== false) {
+            const nome = sanitize(G.players[idx].name);
+            mostrarToast(`⚠️ ${nome} saiu do jogo.`);
+
+            G.players[idx].removido = true;
+            if (euSouMaster()) {
+              const players = G.players.map(p => ({ score: p.score, removido: !!p.removido }));
+              const ativos = G.players.filter(p => !p.removido).length;
+              const novoCur = G.players[G.cur] && G.players[G.cur].removido
+                ? nextActivePlayer(G.cur) : G.cur;
+              const cards = G.cards.map(c => (!c.matched && c.flipped) ? { ...c, flipped: false } : c);
+              salaRef.child('estado').update({
+                players, cards, flipped: [],
+                cur: ativos <= 1 ? G.cur : novoCur,
+                turnStartTime: firebase.database.ServerValue.TIMESTAMP
+              });
+            }
           }
-        }, 1000);
-
-      }
-    });
+        });
+      })(i);
+    }
 
     salaRef.child('estado').on('value', snap => {
       const e = snap.val();
@@ -792,10 +849,37 @@ function iniciarOnline(codigo) {
       G.cur       = e.cur;
       G.flipped   = e.flipped || [];
       G.donePairs = e.donePairs || 0;
-      e.players.forEach((p, i) => {
-        G.players[i].score = p.score || 0;
+      if (e.players) e.players.forEach((p, i) => {
+        if (G.players[i]) {
+          G.players[i].score   = p.score   || 0;
+          G.players[i].removido = !!p.removido;
+        }
       });
       G.busy = G.flipped.length >= 2;
+
+      const ativos = G.players.filter(p => !p.removido).length;
+      if (ativos <= 1 && !gameEnded) {
+        gameEnded = true;
+        G.busy = true;
+        clearInterval(timerInterval);
+        let seg = 10;
+        const turnBar = document.getElementById('turn-bar');
+        const atualizar = () => {
+          if (turnBar) turnBar.innerHTML = `⏳ Último jogador. Resultado em ${seg}s…`;
+        };
+        atualizar();
+        clearInterval(desconexaoTimer);
+        desconexaoTimer = setInterval(() => {
+          seg--;
+          if (seg <= 0) {
+            clearInterval(desconexaoTimer); desconexaoTimer = null;
+            endGameOnline();
+          } else {
+            atualizar();
+          }
+        }, 1000);
+        return;
+      }
 
       if (primeiraVez) { renderBoard(); } else { syncBoard(); }
       if (!primeiraVez && G.donePairs > prevDonePairs) playSomMatch();
@@ -836,14 +920,22 @@ function endGameOnline() {
 
 function mostrarFimOnline(scores, pt) {
   const n = G.players.length;
-  const maxScore = Math.max(...scores);
-  const winners = G.players.filter((_, i) => scores[i] === maxScore);
+  const ativosArr = G.players.filter(p => !p.removido);
+
+  let winners;
+  if (ativosArr.length === 1) {
+    winners = ativosArr;
+  } else {
+    const maxScore = Math.max(...scores.filter((_, i) => !G.players[i].removido));
+    winners = G.players.filter((p, i) => !p.removido && scores[i] === maxScore);
+  }
 
   const winnerTxt = winners.length > 1 ? '🤝 Empate!' : `🏆 ${sanitize(winners[0].name)} venceu!`;
   document.getElementById('online-winner-txt').innerHTML = winnerTxt;
 
   let tableHtml = `<tr><th></th><th>Este jogo</th><th>Total</th></tr>`;
   for (let i = 0; i < n; i++) {
+    if (G.players[i].removido) continue;
     tableHtml += `<tr>
       <td style="color:${G.players[i].color};font-weight:700">👤 ${sanitize(G.players[i].name)}</td>
       <td style="color:${G.players[i].color};font-weight:800;font-size:1.1rem">${scores[i]}</td>
@@ -853,63 +945,66 @@ function mostrarFimOnline(scores, pt) {
   document.getElementById('online-scores-table').innerHTML = tableHtml;
 
   const tempoOnline = Math.floor((Date.now() - jogoStartOnline) / 1000);
-  const meuScore = scores[meuIndex];
-  const isWinner = meuScore === maxScore && winners.length === 1;
+  const isWinner = winners.length === 1 && winners[0] === G.players[meuIndex];
 
   if (isWinner) salvarRankingGlobal(G.players[meuIndex].name, cfg.osize, 'Online', jogoTentativas, tempoOnline);
   registrarStatOnline(cfg.osize, isWinner, tempoOnline);
 
   const revArea = document.getElementById('revanche-area');
 
-  const outroIndex = 1 - meuIndex;
-  revArea.innerHTML = !isWinner
-    ? `<button class="btn btn-primary" onclick="pedirRevanche()">🔄 Pedir Revanche</button>`
-    : `<p style="color:#666;font-size:.9rem">Aguardando o adversário...</p>`;
+  if (n > 2 || ativosArr.length < n) {
+    revArea.innerHTML = '';
+  } else {
+    const outroIndex = 1 - meuIndex;
+    revArea.innerHTML = !isWinner
+      ? `<button class="btn btn-primary" onclick="pedirRevanche()">🔄 Pedir Revanche</button>`
+      : `<p style="color:#666;font-size:.9rem">Aguardando o adversário...</p>`;
 
-  salaRef.child('revanche').on('value', snap => {
-    const rev = snap.val();
-    if (!rev) return;
-    if (rev.desistiu === true) {
-      salaRef.child('revanche').off();
-      if (rev.de === meuIndex) return;
-      const nomeAdv = sanitize(G.players[outroIndex].name);
-      let seg = 5;
-      const atualizar = () => { revArea.innerHTML = `<p style="color:#e94560;font-weight:600">😔 ${nomeAdv} não quer mais jogar.<br>Voltando ao menu em ${seg}s...</p>`; };
-      atualizar();
-      const t = setInterval(() => { seg--; if (seg <= 0) { clearInterval(t); voltarMenuOnline(); } else atualizar(); }, 1000);
-      return;
-    }
-    if (rev.aceito === true)  { salaRef.child('revanche').off(); iniciarRevanche(); return; }
-    if (rev.aceito === false) {
-      salaRef.child('revanche').off();
-      revArea.innerHTML = `<p style="color:#e94560">Revanche recusada.</p>`;
-      setTimeout(() => voltarMenuOnline(), 2000); return;
-    }
-    if (rev.pedido && rev.de !== meuIndex) {
-      let seg = 20;
-      const nomePedinte = sanitize(G.players[rev.de].name);
-      const mostrar = () => {
-        revArea.innerHTML = `
-          <p style="color:#fff;font-weight:700;margin-bottom:12px">🔄 ${nomePedinte} quer revanche!</p>
-          <div style="display:flex;gap:10px;justify-content:center">
-            <button class="btn btn-primary"   onclick="aceitarRevanche()">Aceitar (${seg}s)</button>
-            <button class="btn btn-secondary" onclick="recusarRevanche()">Recusar</button>
-          </div>`;
-      };
-      mostrar();
-      const t = setInterval(() => { seg--; if (seg <= 0) { clearInterval(t); recusarRevanche(); } else mostrar(); }, 1000);
-    }
-    if (rev.pedido && rev.de === meuIndex) {
-      revArea.innerHTML = `<p style="color:#888;font-size:.9rem">Aguardando resposta...</p>`;
-    }
-  });
+    salaRef.child('revanche').on('value', snap => {
+      const rev = snap.val();
+      if (!rev) return;
+      if (rev.desistiu === true) {
+        salaRef.child('revanche').off();
+        if (rev.de === meuIndex) return;
+        const nomeAdv = sanitize(G.players[outroIndex].name);
+        let seg = 5;
+        const atualizar = () => { revArea.innerHTML = `<p style="color:#e94560;font-weight:600">😔 ${nomeAdv} não quer mais jogar.<br>Voltando ao menu em ${seg}s...</p>`; };
+        atualizar();
+        const t = setInterval(() => { seg--; if (seg <= 0) { clearInterval(t); voltarMenuOnline(); } else atualizar(); }, 1000);
+        return;
+      }
+      if (rev.aceito === true)  { salaRef.child('revanche').off(); iniciarRevanche(); return; }
+      if (rev.aceito === false) {
+        salaRef.child('revanche').off();
+        revArea.innerHTML = `<p style="color:#e94560">Revanche recusada.</p>`;
+        setTimeout(() => voltarMenuOnline(), 2000); return;
+      }
+      if (rev.pedido && rev.de !== meuIndex) {
+        let seg = 20;
+        const nomePedinte = sanitize(G.players[rev.de].name);
+        const mostrar = () => {
+          revArea.innerHTML = `
+            <p style="color:#fff;font-weight:700;margin-bottom:12px">🔄 ${nomePedinte} quer revanche!</p>
+            <div style="display:flex;gap:10px;justify-content:center">
+              <button class="btn btn-primary"   onclick="aceitarRevanche()">Aceitar (${seg}s)</button>
+              <button class="btn btn-secondary" onclick="recusarRevanche()">Recusar</button>
+            </div>`;
+        };
+        mostrar();
+        const t = setInterval(() => { seg--; if (seg <= 0) { clearInterval(t); recusarRevanche(); } else mostrar(); }, 1000);
+      }
+      if (rev.pedido && rev.de === meuIndex) {
+        revArea.innerHTML = `<p style="color:#888;font-size:.9rem">Aguardando resposta...</p>`;
+      }
+    });
+  }
 
   showScreen('screen-end-online');
 
   setTimeout(() => {
-    if (isWinner)                { iniciarConfete(); playSomVitoria(); }
-    else if (meuScore === maxScore) { playSomEmpate(); }
-    else                         { iniciarAnimacaoDerrota(); playSomDerrota(); }
+    if (isWinner)                              { iniciarConfete(); playSomVitoria(); }
+    else if (winners.includes(G.players[meuIndex])) { playSomEmpate(); }
+    else                                       { iniciarAnimacaoDerrota(); playSomDerrota(); }
   }, 400);
 }
 
@@ -945,12 +1040,9 @@ function iniciarRevanche() {
   if (meuIndex === 0) {
     const picked = shuffle([...EMOJIS]).slice(0, G.totalPairs);
     const cards  = shuffle([...picked, ...picked]).map((emoji, id) => ({ id, emoji, flipped: false, matched: false }));
+    const players = G.players.map(() => ({ score: 0, removido: false }));
     salaRef.child('estado').set({
-      cards, cur: 0, flipped: [], donePairs: 0,
-      players: [
-        { score: 0 },
-        { score: 0 }
-      ],
+      cards, cur: 0, flipped: [], donePairs: 0, players,
       turnStartTime: firebase.database.ServerValue.TIMESTAMP
     });
     salaRef.child('revanche').set({ pedido: false });
@@ -987,7 +1079,7 @@ function checkMatchOnline() {
   if (a === b || !G.cards[a] || !G.cards[b]) return;
   const hit = G.cards[a].emoji === G.cards[b].emoji;
   const cards  = G.cards.map(c => ({ ...c }));
-  const placar = G.players.map(p => ({ score: p.score }));
+  const placar = G.players.map(p => ({ score: p.score, removido: !!p.removido }));
 
   jogoTentativas++;
   if (hit) {
@@ -996,7 +1088,7 @@ function checkMatchOnline() {
     salaRef.child('estado').update({ cards, flipped: [], donePairs: G.donePairs + 1, players: placar, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
   } else {
     cards[a].flipped = cards[b].flipped = false;
-    salaRef.child('estado').update({ cards, flipped: [], cur: 1 - G.cur, players: placar, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+    salaRef.child('estado').update({ cards, flipped: [], cur: nextActivePlayer(G.cur), players: placar, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
   }
 }
 

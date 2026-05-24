@@ -2,7 +2,7 @@
 
 Jogo da memória multijogador com modos offline, contra IA e online em tempo real. Desenvolvido em HTML, CSS e JavaScript puro — tudo em um único arquivo.
 
-🔗 **[Jogar agora](https://mervati.github.io/Jogo-da-Memoria)** · **v1.3.0**
+🔗 **[Jogar agora](https://mervati.github.io/Jogo-da-Memoria)** · **v1.4.0**
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
@@ -19,7 +19,7 @@ Jogo da memória multijogador com modos offline, contra IA e online em tempo rea
 ### Modos de jogo
 - **Multijogador local** — até 4 jogadores no mesmo dispositivo
 - **Contra a IA** — 3 níveis de dificuldade: Fácil, Médio e Difícil
-- **Online** — partidas em tempo real entre dois jogadores via código de sala
+- **Online** — partidas em tempo real entre 2 a 4 jogadores via código de sala
 
 ### Navegação por abas
 Cada módulo possui abas internas para acesso rápido a todas as seções:
@@ -94,15 +94,18 @@ Histórico completo de desempenho por módulo, acessível na aba Stats de cada t
 - Acessíveis diretamente pela aba Recordes dentro do módulo offline
 
 ### Modo online
+- **2 a 4 jogadores** na mesma partida — o criador escolhe o número de participantes antes de abrir a sala
 - Criação e entrada em sala por **código de 6 caracteres**
+- **Sala de espera dinâmica**: lista de jogadores atualizada em tempo real conforme entram; o criador vê o botão "▶ Iniciar Partida" assim que 2 ou mais participantes estiverem presentes
 - **Botão copiar** o código da sala — um clique copia para a área de transferência e confirma com "✅ Copiado!" por 2 segundos
 - **Validações de entrada**: sala não encontrada, partida já em andamento e sala cheia são tratadas com mensagem imediata e sem travar a tela
 - Status e código da sala **limpos automaticamente** ao navegar de volta para a tela online
 - Sincronização de tabuleiro, placar e turnos via Firebase em tempo real
 - **Chat de reações** com 6 emojis: 🖕 😭 🔥 💩 🤣 🤬 — sincronizado via Firebase com animação flutuante e cooldown de 2,5s
-- Temporizador de turno de 2 minutos com alerta visual; ao se esgotar a vez passa automaticamente para o adversário
-- **Cronômetro de desconexão**: quando o adversário perde a conexão a barra de turno exibe "⚠️ [nome] saiu. Voltando ao menu em 10s…" com contagem regressiva segundo a segundo; após 10s o jogo retorna ao menu automaticamente
-- Sistema de revanche integrado
+- Temporizador de turno de 2 minutos com alerta visual; ao se esgotar a vez passa automaticamente para o próximo jogador ativo
+- **Tratamento de desconexão**: jogador que sai é removido da partida automaticamente; os demais continuam jogando normalmente; se restar apenas 1 jogador, um contador de 10 segundos é exibido antes de mostrar o resultado
+- **Vencedor por sobrevivência**: o último jogador restante vence independentemente do placar; em partidas completas, vence quem tiver mais pares
+- Sistema de revanche integrado (disponível apenas em partidas 2×2 sem desconexões)
 - **Detecção de desistência** — ao sair do fim de jogo, o oponente vê "[nome] não quer mais jogar. Voltando ao menu em 5s..." com contagem regressiva
 - **Ranking Global** — placar online via Firebase com os 10 melhores por tamanho de tabuleiro, separado dos recordes offline; ordenado por tentativas e tempo
 

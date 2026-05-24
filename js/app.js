@@ -227,7 +227,7 @@ function renderBoard() {
     el.id = `c${i}`;
     el.innerHTML = `
       <div class="card-inner">
-        <div class="face back">🃏</div>
+        <div class="face back">🃏<img class="fla-watermark" src=".imagens/clube-de-regatas-do-flamengo-logo-png_seeklogo-32421.png" alt="" draggable="false"></div>
         <div class="face front">${card.emoji}</div>
       </div>`;
     if (!card.flipped && !card.matched) el.addEventListener('click', (e) => { criarRipple(el, e); onCardClick(i); });

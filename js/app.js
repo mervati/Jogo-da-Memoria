@@ -48,16 +48,55 @@ let jogoTimer      = null;
 let jogoTempo      = 0;
 let jogoTentativas = 0;
 let jogoStartOnline = 0;
+let layoutHorizontal = localStorage.getItem('layoutH') === '1';
 
 // ─────────────────────────────────────────────
 // SETUP HELPERS
 // ─────────────────────────────────────────────
 function showScreen(id) {
   initAudio();
+  stopHinoFlamengo();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   playMusic();
   if (id === 'screen-online') limparStatusOnline();
+  const layoutBtn = document.getElementById('layout-toggle-btn');
+  if (layoutBtn) layoutBtn.classList.toggle('visivel', id === 'screen-game');
+  if (id === 'screen-game') aplicarLayoutJogo();
+}
+
+function toggleLayoutJogo() {
+  layoutHorizontal = !layoutHorizontal;
+  localStorage.setItem('layoutH', layoutHorizontal ? '1' : '0');
+  aplicarLayoutJogo();
+  recalcBoardSize();
+}
+
+function aplicarLayoutJogo() {
+  const screen = document.getElementById('screen-game');
+  const btn    = document.getElementById('layout-toggle-btn');
+  if (!screen) return;
+  screen.classList.toggle('layout-h', layoutHorizontal);
+  if (btn) btn.textContent = layoutHorizontal ? '↕' : '↔';
+}
+
+function recalcBoardSize() {
+  if (!G.cols || !G.cards) return;
+  const board = document.getElementById('board');
+  if (!board) return;
+  let cardSize;
+  if (layoutHorizontal) {
+    const rows   = Math.ceil(G.cards.length / G.cols);
+    const availW = Math.max(60, window.innerWidth  - 40 - 190 - 20);
+    const availH = Math.max(60, window.innerHeight - 60);
+    const byW    = Math.floor((Math.min(availW, 600) - G.cols * 9) / G.cols);
+    const byH    = Math.floor((availH - rows * 9) / rows);
+    cardSize = Math.max(36, Math.min(byW, byH, 100));
+  } else {
+    const vw = Math.min(window.innerWidth - 40, 960);
+    cardSize  = Math.min(Math.floor((vw - G.cols * 9) / G.cols), 110);
+  }
+  board.style.width = `${cardSize * G.cols + 9 * (G.cols - 1)}px`;
 }
 
 function limparStatusOnline() {
@@ -65,9 +104,10 @@ function limparStatusOnline() {
   if (st) st.innerHTML = '';
   const cod = document.getElementById('codigo-sala');
   if (cod) cod.value = '';
-  // cancela listener de status se sala estava aguardando jogador
   if (salaRef) {
     salaRef.child('status').off();
+    salaRef.child('jogadores').off();
+    salaRef.off();
     salaRef = null;
   }
 }
@@ -121,6 +161,8 @@ function buildNames() {
 // START
 // ─────────────────────────────────────────────
 function startGame() {
+  const rbar = document.getElementById('reaction-bar');
+  if (rbar) rbar.style.display = 'none';
   const size = SIZES[cfg.size];
 
   // Build players
@@ -171,14 +213,12 @@ function startGame() {
 // RENDER
 // ─────────────────────────────────────────────
 function renderBoard() {
+  playSomEntrada();
+  aplicarLayoutJogo();
   const board = document.getElementById('board');
   board.innerHTML = '';
   board.style.gridTemplateColumns = `repeat(${G.cols}, 1fr)`;
-
-  const vw       = Math.min(window.innerWidth - 40, 960);
-  const cardSize = Math.floor((vw - G.cols * 9) / G.cols);
-  const capped   = Math.min(cardSize, 110);
-  board.style.width = `${capped * G.cols + 9 * (G.cols - 1)}px`;
+  recalcBoardSize();
 
   G.cards.forEach((card, i) => {
     const el = document.createElement('div');
@@ -190,6 +230,16 @@ function renderBoard() {
         <div class="face front">${card.emoji}</div>
       </div>`;
     if (!card.flipped && !card.matched) el.addEventListener('click', (e) => { criarRipple(el, e); onCardClick(i); });
+
+    const row = Math.floor(i / G.cols);
+    const col = i % G.cols;
+    el.style.animationDelay = `${(row + col) * 60}ms`;
+    el.classList.add('card-entrada');
+    el.addEventListener('animationend', () => {
+      el.classList.remove('card-entrada');
+      el.style.animationDelay = '';
+    }, { once: true });
+
     board.appendChild(el);
   });
 }
@@ -436,7 +486,10 @@ function endGame() {
   const isAI    = cfg.mode === 'ai';
 
   // Dificuldade
-  const diffLabel = { easy: 'Fácil', medium: 'Médio', hard: 'Difícil' };
+  const isFlamengo = document.documentElement.dataset.tema === 'flamengo';
+  const diffLabel = isFlamengo
+    ? { easy: 'Amador', medium: 'Banco de reserva', hard: 'Camisa 10' }
+    : { easy: 'Fácil', medium: 'Médio', hard: 'Difícil' };
   document.getElementById('end-diff').textContent =
     isAI ? `Dificuldade: ${diffLabel[cfg.diff]}` : '';
 
@@ -492,17 +545,34 @@ function endGame() {
     if (isAI && humanP && aiP) {
       if      (humanP.score > aiP.score) { iniciarConfete(); playSomVitoria(); }
       else if (humanP.score < aiP.score) { iniciarAnimacaoDerrota(); playSomDerrota(); }
-    } else if (!isAI && winners.length === 1) {
-      iniciarConfete(); playSomVitoria();
+      else                               { playSomEmpate(); }
+    } else if (!isAI) {
+      if (winners.length === 1) { iniciarConfete(); playSomVitoria(); }
+      else                      { playSomEmpate(); }
     }
   }, 400);
 }
 
 function askMenu() {
-  if (confirm('Sair da partida atual?')) {
-    if (G.online && salaRef) {
-      salaRef.child('jogadores/' + G.meuIndex + '/online').set(false);
-    }
+  document.getElementById('confirm-overlay').classList.add('aberto');
+}
+
+function fecharConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('aberto');
+}
+
+function fecharConfirmFora(e) {
+  if (e.target === document.getElementById('confirm-overlay')) fecharConfirm();
+}
+
+function confirmarSaida() {
+  fecharConfirm();
+  if (G.online) {
+    voltarMenuOnline();
+  } else {
+    clearInterval(jogoTimer);
+    clearInterval(timerInterval);
+    G = {};
     showScreen('screen-menu');
   }
 }
@@ -515,6 +585,9 @@ let meuIndex = 0;
 let timerInterval = null;
 let timerSegundos = 120;
 let reacaoTs = 0;
+let desconexaoTimer = null;
+let jugadorOnline   = {};
+let toastTimer      = null;
 
 function enviarReacao(emoji) {
   if (!salaRef) return;
@@ -549,7 +622,7 @@ function iniciarTimer(turnStartTime) {
       clearInterval(timerInterval);
       if (G.online && G.cur === G.meuIndex && !G.busy) {
         salaRef.child('estado').update({
-          cur: (G.cur + 1) % 2,
+          cur: 1 - G.cur,
           flipped: [],
           turnStartTime: firebase.database.ServerValue.TIMESTAMP
         });
@@ -588,15 +661,19 @@ function copiarCodigo(codigo, btn) {
 }
 
 function criarSala() {
-  const nome   = document.getElementById('online-name').value.trim() || 'Jogador 1';
+  const nome = cleanNome(document.getElementById('online-name').value.trim() || 'Jogador 1');
   const codigo = Math.random().toString(36).substring(2, 8).toUpperCase();
 
   salaRef = db.ref('salas/' + codigo);
-  salaRef.set({ jogadores: { 0: { nome, score: 0 } }, status: 'aguardando', tamanho: cfg.osize, placarTotal: { 0: 0, 1: 0 }, revanche: { pedido: false } });
-
+  salaRef.set({
+    jogadores: { 0: { nome, score: 0 } },
+    status: 'aguardando', tamanho: cfg.osize,
+    placarTotal: { 0: 0, 1: 0 }, revanche: { pedido: false }
+  });
   meuIndex = 0;
+
   document.getElementById('online-status').innerHTML =
-    `Sala criada!<br>
+    `Sala criada! Compartilhe o código:<br>
      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0">
        <strong style="color:#4fc3f7;font-size:1.3rem;letter-spacing:3px">${codigo}</strong>
        <button onclick="copiarCodigo('${codigo}', this)"
@@ -605,15 +682,18 @@ function criarSala() {
          📋 Copiar
        </button>
      </div>
-     Aguardando outro jogador...`;
+     <span style="color:#888;font-size:.82rem">Aguardando adversário...</span>`;
 
   salaRef.child('status').on('value', snap => {
-    if (snap.val() === 'jogando') iniciarOnline(codigo);
+    if (snap.val() === 'jogando') {
+      salaRef.child('status').off();
+      iniciarOnline(codigo);
+    }
   });
 }
 
 function entrarSala() {
-  const nome   = document.getElementById('online-name').value.trim() || 'Jogador 2';
+  const nome = cleanNome(document.getElementById('online-name').value.trim() || 'Jogador');
   const codigo = document.getElementById('codigo-sala').value.trim().toUpperCase();
   if (!codigo) return;
 
@@ -621,34 +701,63 @@ function entrarSala() {
   salaRef.once('value', snap => {
     if (!snap.exists()) {
       document.getElementById('online-status').textContent = 'Sala não encontrada.';
-      return;
+      salaRef = null; return;
     }
+    const sala = snap.val();
+    if (sala.status === 'jogando') {
+      document.getElementById('online-status').textContent = 'Partida em andamento.';
+      salaRef = null; return;
+    }
+    const jogadores = sala.jogadores || {};
+    if (Object.keys(jogadores).length >= 2) {
+      document.getElementById('online-status').textContent = 'Sala cheia.';
+      salaRef = null; return;
+    }
+    meuIndex = 1;
     salaRef.child('jogadores/1').set({ nome, score: 0 });
     salaRef.child('status').set('jogando');
-    meuIndex = 1;
     iniciarOnline(codigo);
   });
 }
 
+function mostrarToast(msg) {
+  const el = document.getElementById('toast-online');
+  if (!el) return;
+  if (toastTimer) clearTimeout(toastTimer);
+  el.innerHTML = msg;
+  el.classList.add('vis');
+  toastTimer = setTimeout(() => { el.classList.remove('vis'); toastTimer = null; }, 4500);
+}
+
+
 function iniciarOnline(codigo) {
   salaRef.once('value', snap => {
-    const sala      = snap.val();
-    const jogadores = sala.jogadores;
+    const sala = snap.val();
+    const jogadores = sala.jogadores || {};
+    const outroIdx  = 1 - meuIndex;
 
     G = {
       cards: [], flipped: [], cur: 0, busy: false, aiMem: {},
-      totalPairs: SIZES[sala.tamanho || '4x4'].pairs, donePairs: 0, cols: SIZES[sala.tamanho || '4x4'].cols,
+      totalPairs: SIZES[sala.tamanho || '4x4'].pairs,
+      donePairs: 0, cols: SIZES[sala.tamanho || '4x4'].cols,
       online: true, meuIndex,
       players: [
-        { name: jogadores[0].nome, score: 0, isAI: false, color: COLORS[0], rgb: COLORS_RGB[0] },
-        { name: jogadores[1].nome, score: 0, isAI: false, color: COLORS[1], rgb: COLORS_RGB[1] }
+        { name: jogadores[0] ? jogadores[0].nome : 'Jogador 1', score: 0, isAI: false, color: COLORS[0], rgb: COLORS_RGB[0] },
+        { name: jogadores[1] ? jogadores[1].nome : 'Jogador 2', score: 0, isAI: false, color: COLORS[1], rgb: COLORS_RGB[1] }
       ]
     };
 
     if (meuIndex === 0) {
       const picked = shuffle([...EMOJIS]).slice(0, G.totalPairs);
-      const cards  = shuffle([...picked, ...picked]).map((emoji, id) => ({ id, emoji, flipped: false, matched: false }));
-      salaRef.child('estado').set({ cards, cur: 0, flipped: [], donePairs: 0, players: [{ score: 0 }, { score: 0 }], turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+      const cards = shuffle([...picked, ...picked]).map((emoji, id) => ({ id, emoji, flipped: false, matched: false }));
+      salaRef.child('estado').set({
+        cards, cur: 0, flipped: [], donePairs: 0,
+        players: [
+          { score: 0 },
+          { score: 0 }
+        ],
+        turnStartTime: firebase.database.ServerValue.TIMESTAMP
+      });
     }
 
     jogoTentativas = 0;
@@ -657,7 +766,6 @@ function iniciarOnline(codigo) {
     showScreen('screen-game');
     renderScores();
 
-    // Barra de reações
     const rbar = document.getElementById('reaction-bar');
     if (rbar) rbar.style.display = 'flex';
     reacaoTs = 0;
@@ -669,26 +777,37 @@ function iniciarOnline(codigo) {
       mostrarReacaoFlutuante(r.emoji, nome);
     });
 
+    jugadorOnline = {};
+    jugadorOnline[meuIndex] = true;
+    jugadorOnline[outroIdx] = true;
     const minhaRef = salaRef.child('jogadores/' + meuIndex + '/online');
     minhaRef.set(true);
     minhaRef.onDisconnect().set(false);
 
-    const outroIndex = meuIndex === 0 ? 1 : 0;
-    salaRef.child('jogadores/' + outroIndex + '/online').on('value', snap => {
-      if (snap.val() === false && G.players && G.players[outroIndex]) {
-        G.busy = true;
-        let segundos = 10;
+    salaRef.child('jogadores/' + outroIdx + '/online').on('value', snap => {
+      const prevOnline = jugadorOnline[outroIdx];
+      jugadorOnline[outroIdx] = snap.val() !== false;
+      if (!G.players || !G.players[outroIdx]) return;
+      const nome = sanitize(G.players[outroIdx].name);
+
+      if (!jugadorOnline[outroIdx] && prevOnline !== false) {
+        let seg = 10;
         const turnBar = document.getElementById('turn-bar');
-        turnBar.innerHTML = `<span style="color:#e94560">⚠️ ${sanitize(G.players[outroIndex].name)} saiu da sala. Voltando ao menu em ${segundos}s...</span>`;
-        const timer = setInterval(() => {
-          segundos--;
-          if (segundos <= 0) {
-            clearInterval(timer);
-            showScreen('screen-menu');
+        const atualizar = () => {
+          if (turnBar) turnBar.innerHTML = `⚠️ <span>${nome}</span> saiu. Voltando ao menu em ${seg}s…`;
+        };
+        atualizar();
+        clearInterval(desconexaoTimer);
+        desconexaoTimer = setInterval(() => {
+          seg--;
+          if (seg <= 0) {
+            clearInterval(desconexaoTimer); desconexaoTimer = null;
+            voltarMenuOnline();
           } else {
-            turnBar.innerHTML = `<span style="color:#e94560">⚠️ ${sanitize(G.players[outroIndex].name)} saiu da sala. Voltando ao menu em ${segundos}s...</span>`;
+            atualizar();
           }
         }, 1000);
+
       }
     });
 
@@ -703,14 +822,12 @@ function iniciarOnline(codigo) {
       G.cur       = e.cur;
       G.flipped   = e.flipped || [];
       G.donePairs = e.donePairs || 0;
-      e.players.forEach((p, i) => { G.players[i].score = p.score; });
+      e.players.forEach((p, i) => {
+        G.players[i].score = p.score || 0;
+      });
       G.busy = G.flipped.length >= 2;
 
-      if (primeiraVez) {
-        renderBoard();
-      } else {
-        syncBoard();
-      }
+      if (primeiraVez) { renderBoard(); } else { syncBoard(); }
       if (!primeiraVez && G.donePairs > prevDonePairs) playSomMatch();
       refreshScores();
       setTurnBar();
@@ -727,100 +844,77 @@ function iniciarOnline(codigo) {
 
 function endGameOnline() {
   clearInterval(timerInterval);
-  const s0 = G.players[0].score;
-  const s1 = G.players[1].score;
+  const n = G.players.length;
+  const scores = G.players.map(p => p.score);
 
   if (meuIndex === 0) {
     salaRef.child('placarTotal').once('value', snap => {
-      const pt = snap.val() || { 0: 0, 1: 0 };
-      salaRef.child('placarTotal').set({ 0: pt[0] + s0, 1: pt[1] + s1 });
+      const pt = snap.val() || {};
+      const novo = {};
+      for (let i = 0; i < n; i++) novo[i] = (pt[i] || 0) + scores[i];
+      salaRef.child('placarTotal').set(novo);
       salaRef.child('revanche').set({ pedido: false });
     });
   }
 
   setTimeout(() => {
     salaRef.child('placarTotal').once('value', snap => {
-      const pt = snap.val() || { 0: s0, 1: s1 };
-      mostrarFimOnline(s0, s1, pt[0], pt[1]);
+      mostrarFimOnline(scores, snap.val() || {});
     });
   }, meuIndex === 0 ? 400 : 700);
 }
 
-function mostrarFimOnline(s0, s1, t0, t1) {
-  let winnerTxt;
-  if (s0 === s1)      winnerTxt = '🤝 Empate!';
-  else if (s0 > s1)   winnerTxt = `🏆 ${sanitize(G.players[0].name)} venceu!`;
-  else                winnerTxt = `🏆 ${sanitize(G.players[1].name)} venceu!`;
+function mostrarFimOnline(scores, pt) {
+  const n = G.players.length;
+  const maxScore = Math.max(...scores);
+  const winners = G.players.filter((_, i) => scores[i] === maxScore);
+
+  const winnerTxt = winners.length > 1 ? '🤝 Empate!' : `🏆 ${sanitize(winners[0].name)} venceu!`;
   document.getElementById('online-winner-txt').innerHTML = winnerTxt;
 
-  document.getElementById('online-scores-table').innerHTML = `
-    <tr>
-      <th></th><th>Este jogo</th><th>Total</th>
-    </tr>
-    <tr>
-      <td style="color:${G.players[0].color};font-weight:700">👤 ${sanitize(G.players[0].name)}</td>
-      <td style="color:${G.players[0].color};font-weight:800;font-size:1.1rem">${s0}</td>
-      <td style="color:#666">${t0}</td>
-    </tr>
-    <tr>
-      <td style="color:${G.players[1].color};font-weight:700">👤 ${sanitize(G.players[1].name)}</td>
-      <td style="color:${G.players[1].color};font-weight:800;font-size:1.1rem">${s1}</td>
-      <td style="color:#666">${t1}</td>
+  let tableHtml = `<tr><th></th><th>Este jogo</th><th>Total</th></tr>`;
+  for (let i = 0; i < n; i++) {
+    tableHtml += `<tr>
+      <td style="color:${G.players[i].color};font-weight:700">👤 ${sanitize(G.players[i].name)}</td>
+      <td style="color:${G.players[i].color};font-weight:800;font-size:1.1rem">${scores[i]}</td>
+      <td style="color:#666">${pt[i] || 0}</td>
     </tr>`;
+  }
+  document.getElementById('online-scores-table').innerHTML = tableHtml;
 
   const tempoOnline = Math.floor((Date.now() - jogoStartOnline) / 1000);
-  const isWinner = (s0 > s1 && meuIndex === 0) || (s1 > s0 && meuIndex === 1);
-  if (isWinner) {
-    salvarRankingGlobal(G.players[meuIndex].name, cfg.osize, 'Online', jogoTentativas, tempoOnline);
-  }
+  const meuScore = scores[meuIndex];
+  const isWinner = meuScore === maxScore && winners.length === 1;
+
+  if (isWinner) salvarRankingGlobal(G.players[meuIndex].name, cfg.osize, 'Online', jogoTentativas, tempoOnline);
   registrarStatOnline(cfg.osize, isWinner, tempoOnline);
-  const revArea    = document.getElementById('revanche-area');
-  const outroIndex = meuIndex === 0 ? 1 : 0;
 
-  if (!isWinner) {
-    revArea.innerHTML = `<button class="btn btn-primary" onclick="pedirRevanche()">🔄 Pedir Revanche</button>`;
-  } else {
-    revArea.innerHTML = `<p style="color:#666;font-size:.9rem">Aguardando o adversário...</p>`;
-  }
+  const revArea = document.getElementById('revanche-area');
 
-  showScreen('screen-end-online');
-
-  setTimeout(() => {
-    const meuScore   = meuIndex === 0 ? s0 : s1;
-    const outroScore = meuIndex === 0 ? s1 : s0;
-    if      (meuScore > outroScore) { iniciarConfete(); playSomVitoria(); }
-    else if (meuScore < outroScore) { iniciarAnimacaoDerrota(); playSomDerrota(); }
-  }, 400);
+  const outroIndex = 1 - meuIndex;
+  revArea.innerHTML = !isWinner
+    ? `<button class="btn btn-primary" onclick="pedirRevanche()">🔄 Pedir Revanche</button>`
+    : `<p style="color:#666;font-size:.9rem">Aguardando o adversário...</p>`;
 
   salaRef.child('revanche').on('value', snap => {
     const rev = snap.val();
     if (!rev) return;
-
     if (rev.desistiu === true) {
       salaRef.child('revanche').off();
       if (rev.de === meuIndex) return;
-      const nomeAdversario = sanitize(G.players[outroIndex].name);
+      const nomeAdv = sanitize(G.players[outroIndex].name);
       let seg = 5;
-      const atualizar = () => {
-        revArea.innerHTML = `<p style="color:#e94560;font-weight:600">😔 ${nomeAdversario} não quer mais jogar.<br>Voltando ao menu em ${seg}s...</p>`;
-      };
+      const atualizar = () => { revArea.innerHTML = `<p style="color:#e94560;font-weight:600">😔 ${nomeAdv} não quer mais jogar.<br>Voltando ao menu em ${seg}s...</p>`; };
       atualizar();
-      const t = setInterval(() => {
-        seg--;
-        if (seg <= 0) { clearInterval(t); voltarMenuOnline(); }
-        else atualizar();
-      }, 1000);
+      const t = setInterval(() => { seg--; if (seg <= 0) { clearInterval(t); voltarMenuOnline(); } else atualizar(); }, 1000);
       return;
     }
-
     if (rev.aceito === true)  { salaRef.child('revanche').off(); iniciarRevanche(); return; }
     if (rev.aceito === false) {
       salaRef.child('revanche').off();
       revArea.innerHTML = `<p style="color:#e94560">Revanche recusada.</p>`;
-      setTimeout(() => { voltarMenuOnline(); }, 2000);
-      return;
+      setTimeout(() => voltarMenuOnline(), 2000); return;
     }
-
     if (rev.pedido && rev.de !== meuIndex) {
       let seg = 20;
       const nomePedinte = sanitize(G.players[rev.de].name);
@@ -833,17 +927,20 @@ function mostrarFimOnline(s0, s1, t0, t1) {
           </div>`;
       };
       mostrar();
-      const t = setInterval(() => {
-        seg--;
-        if (seg <= 0) { clearInterval(t); recusarRevanche(); }
-        else mostrar();
-      }, 1000);
+      const t = setInterval(() => { seg--; if (seg <= 0) { clearInterval(t); recusarRevanche(); } else mostrar(); }, 1000);
     }
-
     if (rev.pedido && rev.de === meuIndex) {
       revArea.innerHTML = `<p style="color:#888;font-size:.9rem">Aguardando resposta...</p>`;
     }
   });
+
+  showScreen('screen-end-online');
+
+  setTimeout(() => {
+    if (isWinner)                { iniciarConfete(); playSomVitoria(); }
+    else if (meuScore === maxScore) { playSomEmpate(); }
+    else                         { iniciarAnimacaoDerrota(); playSomDerrota(); }
+  }, 400);
 }
 
 function sairFimJogo() {
@@ -865,19 +962,27 @@ function recusarRevanche() {
 }
 
 function iniciarRevanche() {
+  clearInterval(desconexaoTimer); desconexaoTimer = null;
   gameEnded = false;
   G.cards = [];
   G.flipped = [];
   G.cur = 0;
   G.busy = false;
   G.donePairs = 0;
-  G.players.forEach(p => p.score = 0);
+  G.players.forEach(p => { p.score = 0; });
+  jugadorOnline = {};
 
   if (meuIndex === 0) {
-    const chave  = G.cols === 4 ? '4x4' : G.cols === 5 ? '4x5' : '6x6';
     const picked = shuffle([...EMOJIS]).slice(0, G.totalPairs);
     const cards  = shuffle([...picked, ...picked]).map((emoji, id) => ({ id, emoji, flipped: false, matched: false }));
-    salaRef.child('estado').set({ cards, cur: 0, flipped: [], donePairs: 0, players: [{ score: 0 }, { score: 0 }], turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+    salaRef.child('estado').set({
+      cards, cur: 0, flipped: [], donePairs: 0,
+      players: [
+        { score: 0 },
+        { score: 0 }
+      ],
+      turnStartTime: firebase.database.ServerValue.TIMESTAMP
+    });
     salaRef.child('revanche').set({ pedido: false });
   }
 
@@ -886,22 +991,31 @@ function iniciarRevanche() {
 }
 
 function voltarMenuOnline() {
+  clearInterval(desconexaoTimer); desconexaoTimer = null;
+  clearInterval(timerInterval);
   if (salaRef) {
     salaRef.child('jogadores/' + meuIndex + '/online').set(false);
+    if (G.players) G.players.forEach((_, i) => salaRef.child('jogadores/' + i + '/online').off());
+    salaRef.child('estado').off();
     salaRef.child('revanche').off();
     salaRef.child('reacao').off();
+    salaRef.child('status').off();
+    salaRef.child('jogadores').off();
     salaRef.off();
+    salaRef = null;
   }
   const rbar = document.getElementById('reaction-bar');
   if (rbar) rbar.style.display = 'none';
-  clearInterval(timerInterval);
   G = {};
   showScreen('screen-menu');
 }
 
 function checkMatchOnline() {
+  if (G.cur !== G.meuIndex) return;
+  if (!G.flipped || G.flipped.length !== 2) return;
   const [a, b] = G.flipped;
-  const hit    = G.cards[a].emoji === G.cards[b].emoji;
+  if (a === b || !G.cards[a] || !G.cards[b]) return;
+  const hit = G.cards[a].emoji === G.cards[b].emoji;
   const cards  = G.cards.map(c => ({ ...c }));
   const placar = G.players.map(p => ({ score: p.score }));
 
@@ -912,7 +1026,7 @@ function checkMatchOnline() {
     salaRef.child('estado').update({ cards, flipped: [], donePairs: G.donePairs + 1, players: placar, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
   } else {
     cards[a].flipped = cards[b].flipped = false;
-    salaRef.child('estado').update({ cards, flipped: [], cur: (G.cur + 1) % 2, players: placar, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
+    salaRef.child('estado').update({ cards, flipped: [], cur: 1 - G.cur, players: placar, turnStartTime: firebase.database.ServerValue.TIMESTAMP });
   }
 }
 
@@ -938,8 +1052,8 @@ function initAudio() {
   audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
   musicGain = audioCtx.createGain();
   somGain   = audioCtx.createGain();
-  musicGain.gain.value = document.getElementById('vol-musica') ? document.getElementById('vol-musica').value / 100 : 0.30;
-  somGain.gain.value   = document.getElementById('vol-som')    ? document.getElementById('vol-som').value    / 100 : 0.50;
+  musicGain.gain.value = document.getElementById('vol-musica') ? document.getElementById('vol-musica').value / 100 : 0.00;
+  somGain.gain.value   = document.getElementById('vol-som')    ? document.getElementById('vol-som').value    / 100 : 1.00;
   musicGain.connect(audioCtx.destination);
   somGain.connect(audioCtx.destination);
   // desbloqueia em iOS que cria o contexto já suspenso
@@ -981,6 +1095,47 @@ function stopMusic() {
   clearTimeout(melodyTimer);
 }
 
+function playSomEntrada() {
+  if (!audioCtx || audioCtx.state === 'suspended') return;
+  const t = audioCtx.currentTime;
+
+  // Whoosh de ruído (cartas sendo distribuídas)
+  const bufSz = Math.floor(audioCtx.sampleRate * 0.5);
+  const buf   = audioCtx.createBuffer(1, bufSz, audioCtx.sampleRate);
+  const data  = buf.getChannelData(0);
+  for (let i = 0; i < bufSz; i++) data[i] = Math.random() * 2 - 1;
+
+  const noise  = audioCtx.createBufferSource();
+  noise.buffer = buf;
+
+  const filt = audioCtx.createBiquadFilter();
+  filt.type = 'highpass';
+  filt.frequency.setValueAtTime(600, t);
+  filt.frequency.exponentialRampToValueAtTime(3200, t + 0.38);
+
+  const envN = audioCtx.createGain();
+  envN.gain.setValueAtTime(0, t);
+  envN.gain.linearRampToValueAtTime(0.14, t + 0.04);
+  envN.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+
+  noise.connect(filt); filt.connect(envN); envN.connect(somGain);
+  noise.start(t); noise.stop(t + 0.5);
+
+  // Shimmer ascendente (4 notas)
+  [392, 523.25, 659.25, 880].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const env = audioCtx.createGain();
+    const s   = t + i * 0.07;
+    osc.type  = 'sine';
+    osc.frequency.value = freq;
+    env.gain.setValueAtTime(0, s);
+    env.gain.linearRampToValueAtTime(0.08, s + 0.03);
+    env.gain.exponentialRampToValueAtTime(0.001, s + 0.28);
+    osc.connect(env); env.connect(somGain);
+    osc.start(s); osc.stop(s + 0.28);
+  });
+}
+
 function playSomFlip() {
   if (!audioCtx) return;
   if (audioCtx.state === 'suspended') { audioCtx.resume(); return; }
@@ -1018,7 +1173,29 @@ function playSomMatch() {
   });
 }
 
+let hinoAudio = null;
+
+function playHinoFlamengo() {
+  stopMusic();
+  if (hinoAudio) { hinoAudio.pause(); hinoAudio.currentTime = 0; }
+  hinoAudio = new Audio('.sons e musicas/flamengo-hino-remix.mp3');
+  const volSlider = document.getElementById('vol-som');
+  hinoAudio.volume = volSlider ? volSlider.value / 100 : 1.0;
+  hinoAudio.play().catch(() => {});
+}
+
+function stopHinoFlamengo() {
+  if (!hinoAudio) return;
+  hinoAudio.pause();
+  hinoAudio.currentTime = 0;
+  hinoAudio = null;
+}
+
 function playSomVitoria() {
+  if (document.documentElement.dataset.tema === 'flamengo') {
+    playHinoFlamengo();
+    return;
+  }
   if (!audioCtx || audioCtx.state === 'suspended') return;
   const t = audioCtx.currentTime;
   [261.63, 329.63, 392.00, 523.25, 659.25].forEach((freq, i) => {
@@ -1034,6 +1211,13 @@ function playSomVitoria() {
     osc.connect(env); env.connect(somGain);
     osc.start(s); osc.stop(s + dur);
   });
+}
+
+function playSomEmpate() {
+  const audio = new Audio('.sons e musicas/aplausos.mp3');
+  const volSlider = document.getElementById('vol-som');
+  audio.volume = volSlider ? volSlider.value / 100 : 1.0;
+  audio.play().catch(() => {});
 }
 
 function playSomDerrota() {
@@ -1054,13 +1238,13 @@ function playSomDerrota() {
 }
 
 function setVolMusica(v) {
-  muteMus = (v == 0);
+  muteMus = (v === 0);
   if (musicGain) musicGain.gain.value = v / 100;
   atualizarIconeMute();
 }
 
 function setVolSom(v) {
-  muteSom = (v == 0);
+  muteSom = (v === 0);
   if (somGain) somGain.gain.value = v / 100;
   atualizarIconeMute();
 }
@@ -1121,31 +1305,57 @@ function criarCanvas() {
 }
 
 function iniciarConfete() {
+  const isFlamengo = document.documentElement.dataset.tema === 'flamengo';
   const canvas = criarCanvas();
   const ctx    = canvas.getContext('2d');
-  const cores  = ['#e94560','#4fc3f7','#81c784','#ffb74d','#f06292','#aed581','#ff8a65','#ba68c8'];
-  const parts  = Array.from({ length: 170 }, () => ({
+  const cores  = isFlamengo
+    ? ['#e30613','#e30613','#111111','#ffd700','#cc0000','#ffd700','#111111','#e30613']
+    : ['#e94560','#4fc3f7','#81c784','#ffb74d','#f06292','#aed581','#ff8a65','#ba68c8'];
+  const parts = Array.from({ length: 170 }, () => ({
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height - canvas.height,
-    w: Math.random() * 11 + 5,  h: Math.random() * 6 + 3,
+    w: Math.random() * 11 + 5, h: Math.random() * 6 + 3,
     cor: cores[Math.floor(Math.random() * cores.length)],
-    rot: Math.random() * 360,   vRot: Math.random() * 5 - 2.5,
-    vy: Math.random() * 3 + 2,  swing: Math.random() * 1.5,
-    swingV: Math.random() * .04 + .02, swingPos: Math.random() * Math.PI * 2
+    rot: Math.random() * 360, vRot: Math.random() * 5 - 2.5,
+    vy: Math.random() * 3 + 2, swing: Math.random() * 1.5,
+    swingV: Math.random() * .04 + .02, swingPos: Math.random() * Math.PI * 2,
+    tipo: 'rect'
   }));
-  const TOTAL = 230; let f = 0;
+  if (isFlamengo) {
+    const img = new Image();
+    img.src = '.imagens/AcronimoCamisaFlamengo.png';
+    Array.from({ length: 20 }, () => parts.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      size: Math.random() * 28 + 22,
+      rot: Math.random() * 360, vRot: Math.random() * 4 - 2,
+      vy: Math.random() * 2 + 1.5, swing: Math.random() * 1.2,
+      swingV: Math.random() * .03 + .015, swingPos: Math.random() * Math.PI * 2,
+      tipo: 'img', img
+    }));
+  }
+  const TOTAL = 1140; let f = 0;
   (function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const alfa = f > TOTAL * .72 ? 1 - (f - TOTAL * .72) / (TOTAL * .28) : 1;
     parts.forEach(p => {
       p.y += p.vy; p.rot += p.vRot;
       p.swingPos += p.swingV; p.x += Math.sin(p.swingPos) * p.swing;
+      const limY = p.tipo === 'img' ? p.size : p.h;
+      if (p.y > canvas.height + limY) {
+        p.y = -limY;
+        p.x = Math.random() * canvas.width;
+      }
       ctx.save();
       ctx.globalAlpha = alfa;
-      ctx.translate(p.x + p.w / 2, p.y + p.h / 2);
+      ctx.translate(p.x, p.y);
       ctx.rotate(p.rot * Math.PI / 180);
-      ctx.fillStyle = p.cor;
-      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      if (p.tipo === 'img' && p.img.complete) {
+        ctx.drawImage(p.img, -p.size / 2, -p.size / 2, p.size, p.size);
+      } else if (p.tipo === 'rect') {
+        ctx.fillStyle = p.cor;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      }
       ctx.restore();
     });
     if (++f < TOTAL) requestAnimationFrame(draw); else canvas.remove();
@@ -1184,7 +1394,11 @@ function iniciarAnimacaoDerrota() {
 // UTILS
 // ─────────────────────────────────────────────
 function sanitize(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function cleanNome(str) {
+  return String(str).replace(/<[^>]*>/g,'').replace(/[<>"'&]/g,'').trim().substring(0, 20) || 'Jogador';
 }
 
 function shuffle(arr) {
@@ -1271,20 +1485,19 @@ function limparRecordes() {
 // RANKING GLOBAL (Firebase)
 // ─────────────────────────────────────────────
 function salvarRankingGlobal(nome, tamanho, modo, tentativas, tempo) {
-  console.log('[Ranking] Salvando:', { nome, tamanho, modo, tentativas, tempo });
+  if (!nome || !tamanho || tentativas < 1 || tempo < 5) return;
+  const nomeSeguro = cleanNome(nome);
+  if (!nomeSeguro) return;
   const ref = db.ref('ranking/' + tamanho);
-  ref.push({ nome: nome.substring(0, 20), tentativas, tempo, modo, ts: Date.now() })
-    .then(() => {
-      console.log('[Ranking] Salvo com sucesso!');
-      return ref.once('value');
-    })
+  ref.push({ nome: nomeSeguro, tentativas, tempo, modo, ts: Date.now() })
+    .then(() => ref.once('value'))
     .then(snap => {
       const entries = [];
       snap.forEach(c => entries.push({ key: c.key, ...c.val() }));
       entries.sort((a, b) => a.tentativas - b.tentativas || a.tempo - b.tempo);
       entries.slice(10).forEach(e => ref.child(e.key).remove());
     })
-    .catch(err => console.error('[Ranking] Erro:', err));
+    .catch(() => {});
 }
 
 function carregarRanking(tamanho, tabEl) {
@@ -1344,7 +1557,7 @@ const THEMES = {
     '--txt-muted': '#eee', '--txt-dim': '#aaa',
     '--title-c1': '#e94560', '--title-c2': '#4fc3f7'
   },
-  preto: {
+  dark: {
     '--bg': '#000000', '--accent': '#d4d4d4', '--accent-dark': '#aaaaaa',
     '--accent-rgb': '212,212,212', '--accent2': '#888888',
     '--card-back1': '#1a1a1a', '--card-back2': '#0a0a0a',
@@ -1352,13 +1565,13 @@ const THEMES = {
     '--txt-muted': '#bbb', '--txt-dim': '#777',
     '--title-c1': '#ffffff', '--title-c2': '#66aaff'
   },
-  vermelho: {
-    '--bg': '#0d0000', '--accent': '#dd0000', '--accent-dark': '#aa0000',
-    '--accent-rgb': '221,0,0', '--accent2': '#ff5533',
-    '--card-back1': '#1a0505', '--card-back2': '#0a0000',
+  flamengo: {
+    '--bg': '#080808', '--accent': '#e30613', '--accent-dark': '#b5000e',
+    '--accent-rgb': '227,6,19', '--accent2': '#ffd700',
+    '--card-back1': '#1c0000', '--card-back2': '#0a0000',
     '--card-matched': '#ffe0e0', '--btn-txt': '#fff',
     '--txt-muted': '#eee', '--txt-dim': '#aaa',
-    '--title-c1': '#ff3333', '--title-c2': '#ffaa00'
+    '--title-c1': '#e30613', '--title-c2': '#ffd700'
   }
 };
 
@@ -1376,14 +1589,160 @@ function toggleDaltonico(ativo) {
   }
 }
 
+// ─────────────────────────────────────────────
+// AJUDA
+// ─────────────────────────────────────────────
+const HELP_CONTENT = {
+  'screen-menu': {
+    titulo: '🏠 Menu Principal',
+    itens: [
+      ['Jogar', 'Inicia uma partida local contra a IA ou com amigos no mesmo dispositivo.'],
+      ['Jogar Online', 'Cria ou entra em uma sala para jogar com outras pessoas pela internet.'],
+      ['🎨 Tema', 'Clique no ícone para trocar as cores e o visual do jogo.'],
+      ['🔊 Som', 'Controla o volume da música de fundo e dos efeitos sonoros independentemente.'],
+    ]
+  },
+  'tab-jogar': {
+    titulo: '⚙️ Configurações da Partida',
+    itens: [
+      ['Modo de Jogo', 'Humano × Máquina: jogue contra a IA. Multijogador: 2 a 4 jogadores no mesmo dispositivo.'],
+      ['Dificuldade', 'Define o nível de raciocínio da IA. Fácil memoriza pouco; Difícil quase não erra.'],
+      ['Tamanho do Tabuleiro', '4×4 tem 8 pares, 4×5 tem 10 pares e 6×6 tem 18 pares para encontrar.'],
+    ]
+  },
+  'tab-recordes': {
+    titulo: '🏅 Recordes',
+    itens: [
+      ['Tabela de recordes', 'Seus melhores resultados offline, ordenados por pontuação e tempo de partida.'],
+      ['Top 5', 'Apenas as 5 melhores partidas por tamanho de tabuleiro são registradas.'],
+    ]
+  },
+  'tab-stats-offline': {
+    titulo: '📊 Estatísticas Offline',
+    itens: [
+      ['Vitórias / Derrotas / Empates', 'Contagem total de resultados em partidas locais.'],
+      ['Médias', 'Tempo médio e número médio de tentativas por partida, por tamanho de tabuleiro.'],
+    ]
+  },
+  'tab-online-jogar': {
+    titulo: '🌐 Jogar Online',
+    itens: [
+      ['Nº de Jogadores', 'Quantos jogadores podem entrar na sala ao criar (2 a 4). Irrelevante ao entrar.'],
+      ['Criar Sala', 'Gera um código de 6 letras. Compartilhe com os amigos para que entrem.'],
+      ['▶ Iniciar', 'Aparece para o anfitrião quando há ao menos 2 jogadores. Permite começar antes de encher a sala.'],
+      ['Entrar na Sala', 'Digite o código recebido do anfitrião e clique em Entrar.'],
+    ]
+  },
+  'tab-ranking': {
+    titulo: '🌍 Ranking Global',
+    itens: [
+      ['Ranking', 'Melhores jogadores de partidas online, ordenados por tempo e tentativas.'],
+      ['Quem entra', 'Apenas o vencedor da partida tem a pontuação registrada no ranking global.'],
+    ]
+  },
+  'tab-stats-online': {
+    titulo: '📊 Estatísticas Online',
+    itens: [
+      ['Vitórias / Derrotas / Empates', 'Contagem total de resultados em partidas online.'],
+      ['Médias', 'Tempo médio e tentativas médias por tamanho de tabuleiro nas partidas online.'],
+    ]
+  },
+  'screen-game': {
+    titulo: '🎮 Como Jogar',
+    itens: [
+      ['Virar cartas', 'Clique em duas cartas por turno para tentar encontrar um par idêntico.'],
+      ['Par correto', 'Ganhe 1 ponto e jogue novamente sem passar a vez para o próximo.'],
+      ['Par errado', 'As cartas voltam viradas e a vez passa ao próximo jogador.'],
+      ['⏱ Relógio', 'Conta o tempo total da partida. Quanto mais rápido terminar, maior a chance de bater o recorde.'],
+      ['Menu', 'Sai da partida atual e volta ao menu principal.'],
+    ]
+  },
+  'screen-game-online': {
+    titulo: '🎮 Como Jogar (Online)',
+    itens: [
+      ['Virar cartas', 'Clique em duas cartas por turno para tentar encontrar um par idêntico.'],
+      ['Par correto', 'Ganhe 1 ponto e jogue novamente sem passar a vez para o próximo.'],
+      ['Par errado', 'As cartas voltam viradas e a vez passa ao próximo jogador.'],
+      ['⏱ Timer', 'Cada turno tem 2 minutos. Se esgotar, a vez passa automaticamente para o próximo.'],
+      ['Reações', 'Use os emojis para reagir às jogadas dos adversários em tempo real.'],
+      ['Menu', 'Sai da partida atual e volta ao menu principal.'],
+    ]
+  },
+  'screen-end': {
+    titulo: '🏆 Fim de Partida',
+    itens: [
+      ['Resultado', 'Exibe o vencedor, a dificuldade utilizada e se foi um novo recorde pessoal.'],
+      ['Jogar Novamente', 'Reinicia uma nova partida com exatamente as mesmas configurações.'],
+      ['Menu', 'Volta ao menu principal sem iniciar nova partida.'],
+    ]
+  },
+  'screen-end-online': {
+    titulo: '🏆 Fim de Partida Online',
+    itens: [
+      ['Placar', 'Pontos desta partida e total acumulado da sessão para cada jogador.'],
+      ['Pedir Revanche (2 jogadores)', 'Solicita nova partida ao adversário. Ele tem 20 segundos para aceitar ou recusar.'],
+      ['Jogar Novamente (3–4 jogadores)', 'O anfitrião inicia uma nova rodada para todos os jogadores da sala.'],
+      ['← Menu', 'Sai da sala e volta ao menu principal.'],
+    ]
+  }
+};
+
+function abrirAjuda() {
+  const activeScreen = document.querySelector('.screen.active');
+  const screenId = activeScreen ? activeScreen.id : 'screen-menu';
+
+  let chave = screenId;
+  if (screenId === 'screen-game' && G && G.online) chave = 'screen-game-online';
+  if (screenId === 'screen-setup' || screenId === 'screen-online') {
+    const panels = activeScreen.querySelectorAll('.tab-panel');
+    for (const p of panels) {
+      if (p.style.display !== 'none') { chave = p.id; break; }
+    }
+  }
+
+  const conteudo = HELP_CONTENT[chave] || HELP_CONTENT[screenId];
+  if (!conteudo) return;
+
+  document.getElementById('help-titulo').textContent = conteudo.titulo;
+  document.getElementById('help-corpo').innerHTML = conteudo.itens.map(([titulo, desc]) =>
+    `<div class="help-item"><strong>${titulo}</strong><span>${desc}</span></div>`
+  ).join('');
+
+  document.getElementById('help-overlay').classList.add('aberto');
+}
+
+function fecharAjuda() {
+  document.getElementById('help-overlay').classList.remove('aberto');
+}
+
+function fecharAjudaFora(e) {
+  if (e.target === document.getElementById('help-overlay')) fecharAjuda();
+}
+
 function aplicarTema(nome) {
   const tema = THEMES[nome];
   if (!tema) return;
   const root = document.documentElement;
   Object.entries(tema).forEach(([k, v]) => root.style.setProperty(k, v));
+  root.dataset.tema = nome;
   document.querySelectorAll('.theme-dot').forEach(el => {
     el.classList.toggle('ativo', el.dataset.tema === nome);
   });
+  const diffNames = nome === 'flamengo'
+    ? { easy: '🥺 Amador', medium: '🎽 Banco de reserva', hard: '⚽ Camisa 10' }
+    : { easy: '😊 Fácil', medium: '🧠 Médio', hard: '😈 Difícil' };
+  document.querySelectorAll('[data-g="diff"]').forEach(el => {
+    el.textContent = diffNames[el.dataset.v] || el.textContent;
+  });
+  const nomeLabel = nome === 'flamengo' ? 'Nome do Jogador' : 'Seu Nome';
+  ['label-online-name', 'label-human-name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = nomeLabel;
+  });
+  const modoAiEl = document.getElementById('opt-mode-ai');
+  if (modoAiEl) modoAiEl.textContent = nome === 'flamengo' ? '🤖 Jogador × Treinador' : '🤖 Humano × Máquina';
+  const diffMaqEl = document.getElementById('label-diff-maquina');
+  if (diffMaqEl) diffMaqEl.textContent = nome === 'flamengo' ? 'Dificuldade do Treino' : 'Dificuldade da Máquina';
   localStorage.setItem('tema', nome);
 }
 
@@ -1537,8 +1896,9 @@ function mostrarEstatisticasOffline() {
   const totalV = sizes.reduce((a, k) => a + st[k].v, 0);
   const taxa   = totalP ? Math.round(totalV / totalP * 100) : 0;
 
+  const btnVoltar = `<button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>`;
   if (totalP === 0) {
-    el.innerHTML = '<p class="stats-empty">Nenhuma partida registrada ainda.<br>Jogue uma partida para ver suas estatísticas! 🎮</p>';
+    el.innerHTML = '<p class="stats-empty">Nenhuma partida registrada ainda.<br>Jogue uma partida para ver suas estatísticas! 🎮</p>' + btnVoltar;
     return;
   }
   el.innerHTML = `
@@ -1549,7 +1909,8 @@ function mostrarEstatisticasOffline() {
     </div>
     <div class="stats-grid">
       ${sizes.map(k => statsCardHtml(labels[k], st[k], true)).join('')}
-    </div>`;
+    </div>
+    ${btnVoltar}`;
 }
 
 function mostrarEstatisticasOnline() {
@@ -1562,8 +1923,9 @@ function mostrarEstatisticasOnline() {
   const totalV = sizes.reduce((a, k) => a + st[k].v, 0);
   const taxa   = totalP ? Math.round(totalV / totalP * 100) : 0;
 
+  const btnVoltar = `<button class="btn btn-secondary" style="margin-top:20px" onclick="showScreen('screen-menu')">← Voltar</button>`;
   if (totalP === 0) {
-    el.innerHTML = '<p class="stats-empty">Nenhuma partida online registrada ainda.<br>Jogue online para ver suas estatísticas! 🌐</p>';
+    el.innerHTML = '<p class="stats-empty">Nenhuma partida online registrada ainda.<br>Jogue online para ver suas estatísticas! 🌐</p>' + btnVoltar;
     return;
   }
   el.innerHTML = `
@@ -1574,7 +1936,8 @@ function mostrarEstatisticasOnline() {
     </div>
     <div class="stats-grid">
       ${sizes.map(k => statsCardHtml(labels[k], st[k], false)).join('')}
-    </div>`;
+    </div>
+    ${btnVoltar}`;
 }
 
 // ─────────────────────────────────────────────

@@ -141,6 +141,8 @@ body {
   background: url('../.imagens/clube-de-regatas-do-flamengo-logo-png_seeklogo-32421.png') center/contain no-repeat;
   opacity: .22;
   pointer-events: none;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 @keyframes pdotFloat {
   from {

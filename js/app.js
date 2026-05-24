@@ -56,6 +56,7 @@ let layoutHorizontal = localStorage.getItem('layoutH') === '1';
 function showScreen(id) {
   initAudio();
   stopHinoFlamengo();
+  document.querySelectorAll('.resultado-canvas').forEach(c => c.remove());
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   playMusic();
@@ -1297,6 +1298,7 @@ function toggleMute() {
 // ─────────────────────────────────────────────
 function criarCanvas() {
   const c = document.createElement('canvas');
+  c.className = 'resultado-canvas';
   c.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
   document.body.appendChild(c);
   c.width  = window.innerWidth;

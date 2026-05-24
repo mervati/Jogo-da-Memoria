@@ -372,7 +372,6 @@ body {
 .opt:hover { border-color: rgba(255,255,255,.35); color: #fff; }
 .opt.sel { border-color: var(--accent); background: rgba(var(--accent-rgb),.18); color: #fff; }
 /* ── AVATAR PICKER INLINE ── */
-.avatar-picker-wrap { position: relative; }
 .avatar-picker-btn {
   width: 48px; height: 48px; border-radius: 50%;
   background-size: cover; background-position: center;
@@ -380,15 +379,7 @@ body {
   cursor: pointer; transition: border-color .2s, transform .2s;
 }
 .avatar-picker-btn:hover { border-color: var(--accent); transform: scale(1.06); }
-.avatar-picker-grid {
-  position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
-  background: rgba(15,15,35,.96); border: 1px solid rgba(255,255,255,.12);
-  border-radius: 14px; padding: 14px 16px;
-  display: none; flex-wrap: wrap; gap: 8px; justify-content: center; width: 210px;
-  z-index: 200;
-}
-.avatar-picker-grid.aberto { display: flex; }
-.avatar-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 200px; }
+.avatar-picker-btn.ativo { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.35); }
 .avatar-opt {
   width: 52px; height: 52px; border-radius: 50%;
   background-size: cover; background-position: center;

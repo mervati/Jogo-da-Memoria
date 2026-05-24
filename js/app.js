@@ -644,7 +644,11 @@ function euSouMaster() {
 }
 
 function toggleAvatarPicker() {
-  document.getElementById('avatar-picker-grid').classList.toggle('aberto');
+  const sec = document.getElementById('avatar-picker-section');
+  const btn = document.getElementById('avatar-picker-btn');
+  const aberto = sec.style.display === 'flex';
+  sec.style.display = aberto ? 'none' : 'flex';
+  btn.classList.toggle('ativo', !aberto);
 }
 
 function pickAvatar(el) {
@@ -653,7 +657,8 @@ function pickAvatar(el) {
   cfg.avatar = parseInt(el.dataset.av);
   const btn = document.getElementById('avatar-picker-btn');
   if (btn) btn.style.backgroundImage = `url('assets/avatar-${cfg.avatar}.png')`;
-  document.getElementById('avatar-picker-grid').classList.remove('aberto');
+  document.getElementById('avatar-picker-section').style.display = 'none';
+  btn.classList.remove('ativo');
 }
 
 function copiarCodigo(codigo, btn) {

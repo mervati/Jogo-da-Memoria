@@ -117,23 +117,22 @@
       </div>
     </div>
 
+    <div id="avatar-picker-section" style="display:none; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:10px;">
+      <div class="avatar-opt sel" data-av="0" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-0.png')" title="Cyberpunk Ronin"></div>
+      <div class="avatar-opt"     data-av="1" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-1.png')" title="Space Marine"></div>
+      <div class="avatar-opt"     data-av="2" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-2.png')" title="Fantasy Sorceress"></div>
+      <div class="avatar-opt"     data-av="3" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-3.png')" title="Orc Warlord"></div>
+      <div class="avatar-opt"     data-av="4" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-4.png')" title="Pixel Hero"></div>
+      <div class="avatar-opt"     data-av="5" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-5.png')" title="Mech Pilot"></div>
+      <div class="avatar-opt"     data-av="6" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-6.png')" title="Undead Rogue"></div>
+      <div class="avatar-opt"     data-av="7" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-7.png')" title="Sci-Fi Bounty Hunter"></div>
+      <div class="avatar-opt"     data-av="8" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-8.png')" title="Modern Soldier"></div>
+      <div class="avatar-opt"     data-av="9" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-9.png')" title="Cartoon Gamer Girl"></div>
+    </div>
+
     <div class="setup-actions" style="flex-direction:column; align-items:center; gap:14px;">
-      <div style="display:flex; align-items:center; gap:12px; justify-content:center; position:relative;">
-        <div class="avatar-picker-wrap">
-          <div class="avatar-picker-grid" id="avatar-picker-grid">
-            <div class="avatar-opt sel" data-av="0" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-0.png')" title="Cyberpunk Ronin"></div>
-            <div class="avatar-opt"     data-av="1" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-1.png')" title="Space Marine"></div>
-            <div class="avatar-opt"     data-av="2" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-2.png')" title="Fantasy Sorceress"></div>
-            <div class="avatar-opt"     data-av="3" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-3.png')" title="Orc Warlord"></div>
-            <div class="avatar-opt"     data-av="4" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-4.png')" title="Pixel Hero"></div>
-            <div class="avatar-opt"     data-av="5" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-5.png')" title="Mech Pilot"></div>
-            <div class="avatar-opt"     data-av="6" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-6.png')" title="Undead Rogue"></div>
-            <div class="avatar-opt"     data-av="7" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-7.png')" title="Sci-Fi Bounty Hunter"></div>
-            <div class="avatar-opt"     data-av="8" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-8.png')" title="Modern Soldier"></div>
-            <div class="avatar-opt"     data-av="9" onclick="pickAvatar(this)" style="background-image:url('assets/avatar-9.png')" title="Cartoon Gamer Girl"></div>
-          </div>
-          <div class="avatar-picker-btn" id="avatar-picker-btn" onclick="toggleAvatarPicker()" style="background-image:url('assets/avatar-0.png')" title="Escolher avatar"></div>
-        </div>
+      <div style="display:flex; align-items:center; gap:12px; justify-content:center;">
+        <div class="avatar-picker-btn" id="avatar-picker-btn" onclick="toggleAvatarPicker()" style="background-image:url('assets/avatar-0.png')" title="Escolher avatar"></div>
         <button class="btn btn-primary" onclick="criarSala()">➕ Criar Sala</button>
       </div>
 

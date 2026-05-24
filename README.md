@@ -2,7 +2,7 @@
 
 Jogo da memória multijogador com modos offline, contra IA e online em tempo real. Desenvolvido em HTML, CSS e JavaScript puro — tudo em um único arquivo.
 
-🔗 **[Jogar agora](https://mervati.github.io/Jogo-da-Memoria)**
+🔗 **[Jogar agora](https://mervati.github.io/Jogo-da-Memoria)** · **v1.3.0**
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
@@ -29,7 +29,7 @@ Cada módulo possui abas internas para acesso rápido a todas as seções:
 ### Tela inicial
 - Efeito **parallax em 3 camadas** reagindo ao mouse (desktop) e ao giroscópio (celular):
   - Orbs desfocados com as cores do tema pulsando ao fundo
-  - Emojis flutuantes espalhados pelas bordas com rotação e timing únicos
+  - Emojis flutuantes espalhados pelas bordas com rotação e timing únicos (padrão) ou escudos e emojis temáticos no tema Flamengo
   - Partículas pontilhadas com glow que sobem e descem suavemente
 - **Card glassmorphism** centralizando o conteúdo com fundo desfocado e borda sutil
 - Título com **degradê exclusivo por tema**, animado em loop
@@ -39,17 +39,32 @@ Cada módulo possui abas internas para acesso rápido a todas as seções:
 ### Temas e acessibilidade
 - **3 temas visuais** com widget flutuante 🎨, troca em tempo real e persistência:
   - **Padrão** — azul escuro com degradê vermelho → ciano
-  - **Preto** — fundo preto com degradê branco → azul neon
-  - **Vermelho** — fundo vermelho escuro com degradê vermelho → âmbar
+  - **Dark** — fundo preto com degradê branco → azul neon
+  - **Flamengo** — tema completo rubro-negro: fundo escuro com accent vermelho (#E30613) e dourado (#FFD700), escudos flutuantes animados na tela inicial, verso das cartas com logo em marca d'água, emojis temáticos (🦅 ⚽ 🏆), confete nas cores do clube, hino remix como som de vitória, textos renomeados (dificuldades viram Amador / Banco de reserva / Camisa 10, modo IA vira "Jogador × Treinador")
 - **Modo daltônico** integrado ao widget de temas — substitui as cores dos jogadores por paleta acessível (azul, laranja, ciano, magenta), funciona em tempo real
 
+### Ajuda contextual
+- Botão **❓** fixo em todas as telas abre um overlay com explicações específicas da seção ativa
+- Conteúdo diferente para cada aba: setup offline, setup online, recordes, ranking global, estatísticas, tela de jogo (offline e online) e fim de partida
+- Fechável clicando no ✕ ou fora do painel
+
+### Layout do tabuleiro
+- Botão **↔ / ↕** fixo no canto inferior direito, visível apenas durante a partida
+- Alterna entre **layout vertical** (tabuleiro centralizado, painel de informações acima) e **layout horizontal** (sidebar lateral com placar, barra de turno e timer + tabuleiro ao lado)
+- Preferência salva em `localStorage` e restaurada a cada sessão
+
 ### Animações de jogo
+- **Animação de entrada das cartas**: ao iniciar uma partida cada carta faz pop em cascata (escala 0.25 → 1 com bounce elástico), com delay escalonado por linha + coluna e som de distribuição (whoosh de ruído + shimmer ascendente de 4 notas)
 - **Efeito ripple** ao clicar em uma carta — onda circular se expande a partir do toque, nos modos offline e online
 - **Brilho nas cartas** ao acertar par: pop de escala + faixa de luz varrendo a face + glow persistente na cor do tema
 - **Efeito no placar** ao marcar ponto: número cresce, card do jogador pulsa com glow, "+1" flutua e some
-- **Confete colorido** ao vencer e **chuva de cinzas** ao perder — ambos com fanfares de áudio
+- **Confete colorido** ao vencer (cores do tema ativo, incluindo Flamengo) e **chuva de cinzas** ao perder — ambos com fanfares de áudio
 - Mensagens de fim de jogo com humor contextual e exibição do nível de dificuldade
-- **Barra de turno** com textos naturais: "Sua vez de jogar" (jogador humano), "Vez da máquina" (IA), "Vez de [nome]" (multiplayer com nomes personalizados)
+- **Barra de turno** com textos naturais: "Sua vez de jogar" (jogador humano com nome padrão), "Vez da máquina" (IA), "Vez de [nome]" (multiplayer com nomes personalizados)
+
+### Confirmação de saída
+- Ao clicar em "Menu" durante uma partida, exibe **modal de confirmação** estilizado no lugar do `confirm()` nativo
+- Opções "Não, continuar" e "Sim, sair"; fechável clicando fora do painel
 
 ### Nome do jogador salvo
 - Nome digitado é **salvo automaticamente** em `localStorage` ao sair do campo
@@ -63,10 +78,12 @@ Histórico completo de desempenho por módulo, acessível na aba Stats de cada t
 - **Offline** — total de partidas, vitórias, taxa de vitória, média de tentativas e tempo médio, separados por tamanho de tabuleiro (4×4, 4×5, 6×6)
 - **Online** — mesmas métricas para partidas remotas, independentes das offline
 - Dados persistidos em `localStorage` e exibidos em cards por tamanho com indicadores de destaque
+- Botão **← Voltar** ao final de cada tela de estatísticas
 
 ### Áudio
 - Música de fundo gerada via Web Audio API (presente desde a tela inicial)
-- Sons para virar carta, acertar par, vencer e perder
+- Sons para: distribuição das cartas (whoosh + shimmer), virar carta, acertar par, empate (aplausos), vencer e perder
+- No tema Flamengo a vitória toca o hino remix no lugar do fanfare padrão
 - Widget flutuante com controle de volume separado para música e sons
 - Mute individual por canal ou geral com um clique
 - Compatível com iOS (AudioContext suspenso)
@@ -79,12 +96,14 @@ Histórico completo de desempenho por módulo, acessível na aba Stats de cada t
 ### Modo online
 - Criação e entrada em sala por **código de 6 caracteres**
 - **Botão copiar** o código da sala — um clique copia para a área de transferência e confirma com "✅ Copiado!" por 2 segundos
-- Status e código da sala **limpos automaticamente** ao navegar de volta para a tela online, evitando exibição de estado desatualizado
+- **Validações de entrada**: sala não encontrada, partida já em andamento e sala cheia são tratadas com mensagem imediata e sem travar a tela
+- Status e código da sala **limpos automaticamente** ao navegar de volta para a tela online
 - Sincronização de tabuleiro, placar e turnos via Firebase em tempo real
 - **Chat de reações** com 6 emojis: 🖕 😭 🔥 💩 🤣 🤬 — sincronizado via Firebase com animação flutuante e cooldown de 2,5s
-- Temporizador de turno com alerta visual ao se esgotar
+- Temporizador de turno de 2 minutos com alerta visual; ao se esgotar a vez passa automaticamente para o adversário
+- **Cronômetro de desconexão**: quando o adversário perde a conexão a barra de turno exibe "⚠️ [nome] saiu. Voltando ao menu em 10s…" com contagem regressiva segundo a segundo; após 10s o jogo retorna ao menu automaticamente
 - Sistema de revanche integrado
-- **Detecção de desistência** — ao sair do fim de jogo, o oponente vê a mensagem "[nome] não quer mais jogar. Voltando ao menu em 5s..." com contagem regressiva simétrica para ambos os jogadores
+- **Detecção de desistência** — ao sair do fim de jogo, o oponente vê "[nome] não quer mais jogar. Voltando ao menu em 5s..." com contagem regressiva
 - **Ranking Global** — placar online via Firebase com os 10 melhores por tamanho de tabuleiro, separado dos recordes offline; ordenado por tentativas e tempo
 
 ---
@@ -95,10 +114,10 @@ Histórico completo de desempenho por módulo, acessível na aba Stats de cada t
 |---|---|
 | Interface | HTML5 + CSS3 + JavaScript (ES6+) |
 | Multiplayer online | Firebase Realtime Database (compat SDK v10.12.0) |
-| Áudio | Web Audio API (osciladores, ganho, agendamento) |
+| Áudio | Web Audio API (osciladores, ganho, agendamento) + `new Audio()` |
 | Animações | CSS Keyframes + Canvas API + requestAnimationFrame |
 | Parallax | mousemove / deviceorientation + lerp com requestAnimationFrame |
-| Persistência local | localStorage (tema, modo daltônico, recordes, estatísticas, nome do jogador) |
+| Persistência local | localStorage (tema, layout, modo daltônico, recordes, estatísticas, nome) |
 | Hospedagem | GitHub Pages |
 
 ---

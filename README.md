@@ -2,15 +2,17 @@
 
 Jogo da memória multijogador com modos offline, contra IA e online em tempo real. Desenvolvido em HTML, CSS e JavaScript puro — tudo em um único arquivo.
 
-🔗 **[Jogar agora](https://mervati.github.io/Jogo-da-Memoria)** · **v1.4.0**
+🔗 **[Jogar agora](https://mervati.github.io/Jogo-da-Memoria)** · **v1.5.0**
 
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
-![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black)
-![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-222222?style=flat&logo=githubpages&logoColor=white)
-![Sem dependências](https://img.shields.io/badge/dependências-nenhuma-brightgreen?style=flat)
-![Web Audio API](https://img.shields.io/badge/Web%20Audio%20API-✓-orange?style=flat)
+<p align="center">
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white" alt="HTML5">
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white" alt="CSS3">
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black" alt="JavaScript">
+  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black" alt="Firebase">
+  <img src="https://img.shields.io/badge/GitHub%20Pages-222222?style=flat&logo=githubpages&logoColor=white" alt="GitHub Pages">
+  <img src="https://img.shields.io/badge/dependências-nenhuma-brightgreen?style=flat" alt="Sem dependências">
+  <img src="https://img.shields.io/badge/Web%20Audio%20API-✓-orange?style=flat" alt="Web Audio API">
+</p>
 
 <p align="center">
   <img src="assets/inicio-flamengo.png" alt="Tela inicial — tema Flamengo" width="700">
@@ -101,6 +103,7 @@ Histórico completo de desempenho por módulo, acessível na aba Stats de cada t
 - Acessíveis diretamente pela aba Recordes dentro do módulo offline
 
 ### Modo online
+- **Seleção de avatar**: botão circular ao lado de "Criar Sala" abre uma grade com 10 avatares para escolher (Cyberpunk Ronin, Space Marine, Fantasy Sorceress, Orc Warlord, Pixel Hero, Mech Pilot, Undead Rogue, Sci-Fi Bounty Hunter, Modern Soldier, Cartoon Gamer Girl); o avatar selecionado aparece na sala de espera, no painel de pontuação e na tela de resultado
 - **2 a 4 jogadores** na mesma partida — o criador escolhe o número de participantes antes de abrir a sala
 - Criação e entrada em sala por **código de 6 caracteres**
 - **Sala de espera dinâmica**: lista de jogadores atualizada em tempo real conforme entram; o criador vê o botão "▶ Iniciar Partida" assim que 2 ou mais participantes estiverem presentes
@@ -166,7 +169,7 @@ git push
 Jogo da Memória/
 ├── index.html       # Estrutura HTML das telas
 ├── README.md
-├── assets/          # Imagens usadas no README
+├── assets/          # Imagens do README e avatares dos jogadores (avatar-0.png … avatar-9.png)
 ├── css/
 │   └── style.css    # Todos os estilos, temas e animações CSS
 └── js/

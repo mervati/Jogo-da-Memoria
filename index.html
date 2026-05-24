@@ -78,7 +78,7 @@
     <button class="btn btn-primary"   onclick="showScreen('screen-setup')">Jogar</button>
     <button class="btn btn-secondary" style="margin-top:10px" onclick="showScreen('screen-online')">🌐 Jogar Online</button>
     <p class="menu-credit">Desenvolvido por <span>Mariana Ervati</span></p>
-    <p class="menu-version">v1.3.3</p>
+    <p class="menu-version">v1.3.4</p>
   </div>
 </div>
 
@@ -223,20 +223,18 @@
 
 <!-- ═══ GAME ═══ -->
 <div id="screen-game" class="screen">
-  <div class="game-sidebar" id="game-sidebar">
-    <div class="scores-panel" id="scores-panel"></div>
-    <div class="turn-bar"     id="turn-bar"></div>
-    <div class="timer-bar"    id="timer-bar"></div>
-    <div class="reaction-bar" id="reaction-bar" style="display:none">
-      <button class="react-btn" onclick="enviarReacao('🖕')">🖕</button>
-      <button class="react-btn" onclick="enviarReacao('😭')">😭</button>
-      <button class="react-btn" onclick="enviarReacao('🔥')">🔥</button>
-      <button class="react-btn" onclick="enviarReacao('💩')">💩</button>
-      <button class="react-btn" onclick="enviarReacao('🤣')">🤣</button>
-      <button class="react-btn" onclick="enviarReacao('🤬')">🤬</button>
-    </div>
-    <button class="btn btn-secondary game-menu-btn" onclick="askMenu()">Menu</button>
+  <div class="scores-panel" id="scores-panel"></div>
+  <div class="turn-bar"     id="turn-bar"></div>
+  <div class="timer-bar"    id="timer-bar"></div>
+  <div class="reaction-bar" id="reaction-bar" style="display:none">
+    <button class="react-btn" onclick="enviarReacao('🖕')">🖕</button>
+    <button class="react-btn" onclick="enviarReacao('😭')">😭</button>
+    <button class="react-btn" onclick="enviarReacao('🔥')">🔥</button>
+    <button class="react-btn" onclick="enviarReacao('💩')">💩</button>
+    <button class="react-btn" onclick="enviarReacao('🤣')">🤣</button>
+    <button class="react-btn" onclick="enviarReacao('🤬')">🤬</button>
   </div>
+  <button class="btn btn-secondary game-menu-btn" onclick="askMenu()">Menu</button>
   <div class="board" id="board"></div>
 </div>
 
@@ -323,9 +321,6 @@
     </div>
   </div>
 </div>
-
-<!-- ═══ LAYOUT TOGGLE (visível só no jogo) ═══ -->
-<button class="layout-toggle-btn" id="layout-toggle-btn" onclick="toggleLayoutJogo()" title="Alternar layout">↔</button>
 
 <!-- ═══ AJUDA (fixo em todas as telas) ═══ -->
 <button class="help-btn" onclick="abrirAjuda()" title="Ajuda">❓</button>

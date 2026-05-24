@@ -224,43 +224,6 @@ body {
 }
 .toast-online.vis { opacity: 1; }
 
-/* ── LAYOUT TOGGLE ── */
-.layout-toggle-btn {
-  position: fixed; bottom: 24px; right: 192px; z-index: 1000;
-  width: 42px; height: 42px; border-radius: 50%;
-  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
-  cursor: pointer; font-size: 1.05rem; color: #fff;
-  display: none; align-items: center; justify-content: center;
-  transition: background .2s, transform .15s;
-}
-.layout-toggle-btn.visivel { display: flex; }
-.layout-toggle-btn:hover { background: rgba(255,255,255,.22); transform: scale(1.1); }
-
-/* ── HORIZONTAL LAYOUT ── */
-.game-sidebar { display: contents; }
-
-#screen-game.layout-h {
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 20px;
-  max-width: 100%;
-}
-#screen-game.layout-h .game-sidebar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  min-width: 150px;
-  max-width: 190px;
-  padding-top: 6px;
-  flex-shrink: 0;
-}
-#screen-game.layout-h #board {
-  flex: 1;
-  min-width: 0;
-}
-
 /* ── AJUDA ── */
 .help-btn {
   position: fixed; bottom: 24px; right: 136px; z-index: 1000;

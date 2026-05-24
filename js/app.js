@@ -48,8 +48,6 @@ let jogoTimer      = null;
 let jogoTempo      = 0;
 let jogoTentativas = 0;
 let jogoStartOnline = 0;
-let layoutHorizontal = localStorage.getItem('layoutH') === '1';
-
 // ─────────────────────────────────────────────
 // SETUP HELPERS
 // ─────────────────────────────────────────────
@@ -61,42 +59,14 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   playMusic();
   if (id === 'screen-online') limparStatusOnline();
-  const layoutBtn = document.getElementById('layout-toggle-btn');
-  if (layoutBtn) layoutBtn.classList.toggle('visivel', id === 'screen-game');
-  if (id === 'screen-game') aplicarLayoutJogo();
-}
-
-function toggleLayoutJogo() {
-  layoutHorizontal = !layoutHorizontal;
-  localStorage.setItem('layoutH', layoutHorizontal ? '1' : '0');
-  aplicarLayoutJogo();
-  recalcBoardSize();
-}
-
-function aplicarLayoutJogo() {
-  const screen = document.getElementById('screen-game');
-  const btn    = document.getElementById('layout-toggle-btn');
-  if (!screen) return;
-  screen.classList.toggle('layout-h', layoutHorizontal);
-  if (btn) btn.textContent = layoutHorizontal ? '↕' : '↔';
 }
 
 function recalcBoardSize() {
   if (!G.cols || !G.cards) return;
   const board = document.getElementById('board');
   if (!board) return;
-  let cardSize;
-  if (layoutHorizontal) {
-    const rows   = Math.ceil(G.cards.length / G.cols);
-    const availW = Math.max(60, window.innerWidth  - 40 - 190 - 20);
-    const availH = Math.max(60, window.innerHeight - 60);
-    const byW    = Math.floor((Math.min(availW, 600) - G.cols * 9) / G.cols);
-    const byH    = Math.floor((availH - rows * 9) / rows);
-    cardSize = Math.max(36, Math.min(byW, byH, 100));
-  } else {
-    const vw = Math.min(window.innerWidth - 40, 960);
-    cardSize  = Math.min(Math.floor((vw - G.cols * 9) / G.cols), 110);
-  }
+  const vw = Math.min(window.innerWidth - 40, 960);
+  const cardSize = Math.min(Math.floor((vw - G.cols * 9) / G.cols), 110);
   board.style.width = `${cardSize * G.cols + 9 * (G.cols - 1)}px`;
 }
 
@@ -215,7 +185,6 @@ function startGame() {
 // ─────────────────────────────────────────────
 function renderBoard() {
   playSomEntrada();
-  aplicarLayoutJogo();
   const board = document.getElementById('board');
   board.innerHTML = '';
   board.style.gridTemplateColumns = `repeat(${G.cols}, 1fr)`;

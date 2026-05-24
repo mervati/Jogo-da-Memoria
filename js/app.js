@@ -38,7 +38,7 @@ const SIZES = {
 // ─────────────────────────────────────────────
 // CONFIG STATE (setup screen values)
 // ─────────────────────────────────────────────
-const cfg = { mode:'ai', diff:'easy', np:2, size:'4x4', osize:'4x4', onp:2 };
+const cfg = { mode:'ai', diff:'easy', np:2, size:'4x4', osize:'4x4', onp:2, avatar:0 };
 
 // ─────────────────────────────────────────────
 // GAME STATE
@@ -248,7 +248,10 @@ function renderScores() {
     el.id = `ps${i}`;
     el.style.cssText = `--pc:${p.color};--pc-rgb:${p.rgb}`;
     const suaVezVisivel = G.online && i === G.meuIndex && i === G.cur;
-    el.innerHTML = `<div class="sua-vez" style="font-size:.7rem;color:#4fc3f7;font-weight:700;margin-bottom:2px;display:${suaVezVisivel ? '' : 'none'}">▶ SUA VEZ</div><div class="pn">${p.isAI ? '🤖' : '👤'} ${sanitize(p.name)}</div><div class="pp">${p.score}</div>`;
+    const avHtml = (G.online && p.avatar !== undefined)
+      ? `<div class="av" style="background-image:url('assets/avatar-${p.avatar}.png')"></div>`
+      : `<div style="font-size:1.1rem;margin-bottom:2px">${p.isAI ? '🤖' : '👤'}</div>`;
+    el.innerHTML = `<div class="sua-vez" style="font-size:.7rem;color:#4fc3f7;font-weight:700;margin-bottom:2px;display:${suaVezVisivel ? '' : 'none'}">▶ SUA VEZ</div>${avHtml}<div class="pn">${sanitize(p.name)}</div><div class="pp">${p.score}</div>`;
     panel.appendChild(el);
   });
 }
@@ -640,6 +643,19 @@ function euSouMaster() {
   return false;
 }
 
+function toggleAvatarPicker() {
+  document.getElementById('avatar-picker-grid').classList.toggle('aberto');
+}
+
+function pickAvatar(el) {
+  document.querySelectorAll('.avatar-opt').forEach(a => a.classList.remove('sel'));
+  el.classList.add('sel');
+  cfg.avatar = parseInt(el.dataset.av);
+  const btn = document.getElementById('avatar-picker-btn');
+  if (btn) btn.style.backgroundImage = `url('assets/avatar-${cfg.avatar}.png')`;
+  document.getElementById('avatar-picker-grid').classList.remove('aberto');
+}
+
 function copiarCodigo(codigo, btn) {
   navigator.clipboard.writeText(codigo).then(() => {
     btn.textContent = '✅ Copiado!';
@@ -654,7 +670,7 @@ function criarSala() {
 
   salaRef = db.ref('salas/' + codigo);
   salaRef.set({
-    jogadores: { 0: { nome, score: 0 } },
+    jogadores: { 0: { nome, score: 0, avatar: cfg.avatar } },
     maxJogadores, status: 'aguardando', tamanho: cfg.osize,
     revanche: { pedido: false }
   });
@@ -664,7 +680,10 @@ function criarSala() {
 
   function atualizarSalaEspera(jogadores) {
     const count = Object.keys(jogadores).length;
-    const lista = Object.values(jogadores).map(j => `• ${sanitize(j.nome || 'Jogador')}`).join('<br>');
+    const lista = Object.values(jogadores).map(j => {
+      const av = j.avatar !== undefined ? j.avatar : 0;
+      return `<div style="display:flex;align-items:center;gap:7px;margin:3px 0"><div style="width:26px;height:26px;border-radius:50%;background:url('assets/avatar-${av}.png') center/cover;border:2px solid rgba(255,255,255,.3);flex-shrink:0"></div><span>${sanitize(j.nome || 'Jogador')}</span></div>`;
+    }).join('');
     const podeComecar = count >= 2;
     statusEl.innerHTML =
       `Sala criada! Compartilhe o código:<br>
@@ -722,13 +741,16 @@ function entrarSala() {
       salaRef = null; return;
     }
     meuIndex = count;
-    salaRef.child('jogadores/' + meuIndex).set({ nome, score: 0 });
+    salaRef.child('jogadores/' + meuIndex).set({ nome, score: 0, avatar: cfg.avatar });
 
     const statusEl = document.getElementById('online-status');
 
     function atualizarSalaEspera(jogadores) {
       const n = Object.keys(jogadores).length;
-      const lista = Object.values(jogadores).map(j => `• ${sanitize(j.nome || 'Jogador')}`).join('<br>');
+      const lista = Object.values(jogadores).map(j => {
+      const av = j.avatar !== undefined ? j.avatar : 0;
+      return `<div style="display:flex;align-items:center;gap:7px;margin:3px 0"><div style="width:26px;height:26px;border-radius:50%;background:url('assets/avatar-${av}.png') center/cover;border:2px solid rgba(255,255,255,.3);flex-shrink:0"></div><span>${sanitize(j.nome || 'Jogador')}</span></div>`;
+    }).join('');
       statusEl.innerHTML =
         `<div style="font-size:.85rem;color:#bbb;margin-bottom:8px">${lista}</div>
          <span style="color:#888;font-size:.82rem">Aguardando o anfitrião iniciar (${n}/${max})…</span>`;
@@ -771,6 +793,7 @@ function iniciarOnline(codigo) {
       online: true, meuIndex,
       players: Array.from({ length: total }, (_, i) => ({
         name: jogadores[i] ? jogadores[i].nome : `Jogador ${i + 1}`,
+        avatar: jogadores[i] ? (jogadores[i].avatar || 0) : 0,
         score: 0, isAI: false, color: COLORS[i], rgb: COLORS_RGB[i], removido: false
       }))
     };
@@ -936,8 +959,14 @@ function mostrarFimOnline(scores, pt) {
   let tableHtml = `<tr><th></th><th>Este jogo</th><th>Total</th></tr>`;
   for (let i = 0; i < n; i++) {
     if (G.players[i].removido) continue;
+    const av = G.players[i].avatar !== undefined ? G.players[i].avatar : 0;
     tableHtml += `<tr>
-      <td style="color:${G.players[i].color};font-weight:700">👤 ${sanitize(G.players[i].name)}</td>
+      <td style="color:${G.players[i].color};font-weight:700">
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:28px;height:28px;border-radius:50%;background:url('assets/avatar-${av}.png') center/cover;border:2px solid ${G.players[i].color};flex-shrink:0"></div>
+          <span>${sanitize(G.players[i].name)}</span>
+        </div>
+      </td>
       <td style="color:${G.players[i].color};font-weight:800;font-size:1.1rem">${scores[i]}</td>
       <td style="color:#666">${pt[i] || 0}</td>
     </tr>`;

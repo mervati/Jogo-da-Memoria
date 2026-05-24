@@ -498,7 +498,7 @@ body {
   border: 2px solid rgba(255,255,255,.09);
   font-size: 1.4rem; color: rgba(255,255,255,.1);
 }
-.front { background: #fff; transform: rotateY(180deg); -webkit-transform: rotateY(180deg); font-size: 2rem; overflow: hidden; }
+.front { background: #fff; transform: rotateY(180deg); -webkit-transform: rotateY(180deg); font-size: 2rem; clip-path: inset(0 round 12px); -webkit-clip-path: inset(0 round 12px); }
 .card.matched .front {
   background: var(--card-matched);
   box-shadow: 0 0 18px 4px rgba(var(--accent-rgb), .55);
@@ -528,7 +528,7 @@ body {
 }
 .card:not(.flipped):not(.matched):hover .card-inner { transform: rotateY(12deg); -webkit-transform: rotateY(12deg); }
 
-.back { overflow: hidden; }
+.back { clip-path: inset(0 round 12px); -webkit-clip-path: inset(0 round 12px); }
 .card-ripple {
   position: absolute;
   border-radius: 50%;

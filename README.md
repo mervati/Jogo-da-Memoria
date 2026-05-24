@@ -48,11 +48,6 @@ Cada módulo possui abas internas para acesso rápido a todas as seções:
 - Conteúdo diferente para cada aba: setup offline, setup online, recordes, ranking global, estatísticas, tela de jogo (offline e online) e fim de partida
 - Fechável clicando no ✕ ou fora do painel
 
-### Layout do tabuleiro
-- Botão **↔ / ↕** fixo no canto inferior direito, visível apenas durante a partida
-- Alterna entre **layout vertical** (tabuleiro centralizado, painel de informações acima) e **layout horizontal** (sidebar lateral com placar, barra de turno e timer + tabuleiro ao lado)
-- Preferência salva em `localStorage` e restaurada a cada sessão
-
 ### Animações de jogo
 - **Animação de entrada das cartas**: ao iniciar uma partida cada carta faz pop em cascata (escala 0.25 → 1 com bounce elástico), com delay escalonado por linha + coluna e som de distribuição (whoosh de ruído + shimmer ascendente de 4 notas)
 - **Efeito ripple** ao clicar em uma carta — onda circular se expande a partir do toque, nos modos offline e online

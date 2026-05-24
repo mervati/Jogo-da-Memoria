@@ -12,6 +12,10 @@ Jogo da memória multijogador com modos offline, contra IA e online em tempo rea
 ![Sem dependências](https://img.shields.io/badge/dependências-nenhuma-brightgreen?style=flat)
 ![Web Audio API](https://img.shields.io/badge/Web%20Audio%20API-✓-orange?style=flat)
 
+<p align="center">
+  <img src="assets/inicio-flamengo.png" alt="Tela inicial — tema Flamengo" width="700">
+</p>
+
 ---
 
 ## Funcionalidades
@@ -43,10 +47,18 @@ Cada módulo possui abas internas para acesso rápido a todas as seções:
   - **Flamengo** — tema completo rubro-negro: fundo escuro com accent vermelho (#E30613) e dourado (#FFD700), escudos flutuantes animados na tela inicial, verso das cartas com logo em marca d'água, emojis temáticos (🦅 ⚽ 🏆), confete nas cores do clube, hino remix como som de vitória, textos renomeados (dificuldades viram Amador / Banco de reserva / Camisa 10, modo IA vira "Jogador × Treinador")
 - **Modo daltônico** integrado ao widget de temas — substitui as cores dos jogadores por paleta acessível (azul, laranja, ciano, magenta), funciona em tempo real
 
+<p align="center">
+  <img src="assets/temas.png" alt="Widget de temas e modo daltônico" width="260">
+</p>
+
 ### Ajuda contextual
 - Botão **❓** fixo em todas as telas abre um overlay com explicações específicas da seção ativa
 - Conteúdo diferente para cada aba: setup offline, setup online, recordes, ranking global, estatísticas, tela de jogo (offline e online) e fim de partida
 - Fechável clicando no ✕ ou fora do painel
+
+<p align="center">
+  <img src="assets/botoes.png" alt="Botões flutuantes — ajuda, temas e áudio" width="180">
+</p>
 
 ### Animações de jogo
 - **Animação de entrada das cartas**: ao iniciar uma partida cada carta faz pop em cascata (escala 0.25 → 1 com bounce elástico), com delay escalonado por linha + coluna e som de distribuição (whoosh de ruído + shimmer ascendente de 4 notas)
@@ -104,6 +116,10 @@ Histórico completo de desempenho por módulo, acessível na aba Stats de cada t
 - **Detecção de desistência** — ao sair do fim de jogo, o oponente vê "[nome] não quer mais jogar. Voltando ao menu em 5s..." com contagem regressiva
 - **Ranking Global** — placar online via Firebase com os 10 melhores por tamanho de tabuleiro, separado dos recordes offline; ordenado por tentativas e tempo
 
+<p align="center">
+  <img src="assets/jogar-online.png" alt="Tela de configuração online com seletor de jogadores" width="500">
+</p>
+
 ---
 
 ## Tecnologias
@@ -150,6 +166,7 @@ git push
 Jogo da Memória/
 ├── index.html       # Estrutura HTML das telas
 ├── README.md
+├── assets/          # Imagens usadas no README
 ├── css/
 │   └── style.css    # Todos os estilos, temas e animações CSS
 └── js/

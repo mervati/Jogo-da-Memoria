@@ -477,16 +477,18 @@ body {
 
 .board { display: grid; gap: 9px; }
 
-.card { aspect-ratio: 1; cursor: pointer; perspective: 700px; }
+.card { aspect-ratio: 1; cursor: pointer; perspective: 700px; -webkit-perspective: 700px; }
 .card-inner {
   width: 100%; height: 100%; position: relative;
-  transform-style: preserve-3d; transition: transform .42s ease;
+  transform-style: preserve-3d; -webkit-transform-style: preserve-3d;
+  transition: transform .42s ease, -webkit-transform .42s ease;
 }
 .card.flipped .card-inner,
-.card.matched .card-inner { transform: rotateY(180deg); }
+.card.matched .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 .face {
   position: absolute; width: 100%; height: 100%;
-  border-radius: 12px; backface-visibility: hidden;
+  border-radius: 12px;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
   display: flex; align-items: center; justify-content: center;
 }
 .back {
@@ -494,7 +496,7 @@ body {
   border: 2px solid rgba(255,255,255,.09);
   font-size: 1.4rem; color: rgba(255,255,255,.1);
 }
-.front { background: #fff; transform: rotateY(180deg); font-size: 2rem; overflow: hidden; }
+.front { background: #fff; transform: rotateY(180deg); -webkit-transform: rotateY(180deg); font-size: 2rem; overflow: hidden; }
 .card.matched .front {
   background: var(--card-matched);
   box-shadow: 0 0 18px 4px rgba(var(--accent-rgb), .55);
@@ -522,7 +524,7 @@ body {
   animation: cardShineSweep .45s .05s ease-out forwards;
   pointer-events: none;
 }
-.card:not(.flipped):not(.matched):hover .card-inner { transform: rotateY(12deg); }
+.card:not(.flipped):not(.matched):hover .card-inner { transform: rotateY(12deg); -webkit-transform: rotateY(12deg); }
 
 .back { overflow: hidden; }
 .card-ripple {
